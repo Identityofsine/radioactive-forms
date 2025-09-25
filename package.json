@@ -25,10 +25,12 @@
   },
   "homepage": "https://github.com/Identityofsine/radioactive-forms#readme",
   "devDependencies": {
+    "@types/react": "^19.1.13",
     "concurrently": "^9.2.1",
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "react": "^19.1.1",
     "tsc": "^2.0.4"
   }
 }
