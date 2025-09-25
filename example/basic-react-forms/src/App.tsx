@@ -1,10 +1,28 @@
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
-import { form } from '@radioactive/forms'
-import React from 'react'
+import { useEffect, useState } from 'react'
+import { Form } from '@radioactive/forms'
+
+type TestForm = {
+  name: string;
+  age: number;
+  dead: boolean;
+}
 
 function App() {
+
+  const [form, setForm] = useState<Form<TestForm>>()
+
+  useEffect(() => {
+    if (!setForm) return;
+    const newForm = new Form<TestForm>({
+      name: ['John Doe'],
+      age: [30, [(value) => value > 0]],
+      dead: [false]
+    }, setForm as React.Dispatch<React.SetStateAction<Form<TestForm>>>);
+    setForm(newForm)
+  }, [setForm])
 
   return (
     <>
@@ -35,7 +53,8 @@ function App() {
         </thead>
         <tbody>
           {
-            Object.entries(form.control).map(([key, field]) => (
+            form &&
+            Object.entries(form?.controls).map(([key, field]) => (
               <tr key={key}
                 style={{ borderBottom: '1px solid black', textAlign: 'center' }}
               >
@@ -43,13 +62,27 @@ function App() {
                   <label>{key}</label>
                 </td>
                 <td>
-                  <p>{String(field.value)}</p>
+                  <input
+                    type={typeof field.value === 'boolean' ? 'checkbox' : (typeof field.value === 'number' ? 'number' : 'text')}
+                    value={String(field.value)}
+                    onChange={(e) => {
+                      const value = typeof field.value === 'boolean' ? e.target.checked : (typeof field.value === 'number' ? Number(e.target.value) : e.target.value);
+                      field.value = value as any;
+                    }}
+                  />
                 </td>
               </tr>
             ))}
         </tbody>
       </table>
       <span>HMR is working with <pre style={{ display: 'inline' }}>@radioactive/forms</pre> package (<pre style={{ display: 'inline' }}>../../src/index.ts</pre>)!</span>
+
+      <h4>Form State (click name to update)</h4>
+      <pre style={{ width: '100%' }}>
+        <code style={{ display: 'inline-block', width: '100%', textAlign: 'left', fontSize: '16px' }}>
+          {JSON.stringify(form, null, 2)}
+        </code>
+      </pre>
 
     </>
   )
