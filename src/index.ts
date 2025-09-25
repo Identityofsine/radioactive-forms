@@ -1,10 +1,2 @@
-export const form = {
-  control: {
-    bruh: {
-      value: 10
-    },
-    dummy: {
-      value: 'hello'
-    }
-  }
-}
+export * from './types/form.types'
+export * from './form'
