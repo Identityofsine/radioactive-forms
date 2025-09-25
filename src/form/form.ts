@@ -16,7 +16,10 @@ export class Form<T> extends RequiresHook<Form<T>> implements TopLevelFormState<
   constructor(controls: FormControlMap<T>, setState: React.Dispatch<React.SetStateAction<Form<T>>>);
   constructor(controls: FormControlMap<T> | FormControlPrimitiveMap<T>, setState: React.Dispatch<React.SetStateAction<Form<T>>>) {
     super(setState);
-    this._controls = createFormControls(controls, setState);
+    this._controls = createFormControls(controls, (form) => {
+      this.evaluateState();
+      setState(form);
+    });
     this._flattenedControls = Object.values(this._controls);
     this._dirty = false;
     this._touched = false;
@@ -41,6 +44,14 @@ export class Form<T> extends RequiresHook<Form<T>> implements TopLevelFormState<
 
   public reset(): void {
     this._flattenedControls.forEach(control => control.reset());
+  }
+
+  // TODO: improve this significantly
+  private evaluateState(): void {
+    this._dirty = this._flattenedControls.some(control => control.dirty);
+    this._touched = this._flattenedControls.some(control => control.touched);
+    this._valid = this._flattenedControls.every(control => control.valid);
+    this.propagate(this);
   }
 
 } 

@@ -17,7 +17,7 @@ function App() {
   useEffect(() => {
     if (!setForm) return;
     const newForm = new Form<TestForm>({
-      name: ['John Doe'],
+      name: ['John Doe', [(value) => value.includes('John')]],
       age: [30, [(value) => value > 0]],
       dead: [false]
     }, setForm as React.Dispatch<React.SetStateAction<Form<TestForm>>>);
@@ -35,46 +35,65 @@ function App() {
         </a>
       </div>
       <h1>Radioactive Forms</h1>
-      <table style={{
-        width: '300px',
-        margin: 'auto',
-        border: '1px solid black',
-        borderCollapse: 'collapse'
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-end',
+        gap: '20px',
+        justifyContent: 'center',
+        marginBottom: '20px'
       }}>
-        <thead style={{ borderBottom: '1px solid black' }}>
-          <tr style={{ textAlign: 'center' }}>
-            <td
-              style={{ borderRight: '1px solid black', padding: '10px' }}
-            >Key</td>
-            <td
-              style={{ borderRight: '1px solid black', padding: '10px' }}
-            >Value</td>
-          </tr>
-        </thead>
-        <tbody>
-          {
-            form &&
-            Object.entries(form?.controls).map(([key, field]) => (
-              <tr key={key}
-                style={{ borderBottom: '1px solid black', textAlign: 'center' }}
-              >
-                <td style={{ borderRight: '1px solid black' }}>
-                  <label>{key}</label>
-                </td>
-                <td>
-                  <input
-                    type={typeof field.value === 'boolean' ? 'checkbox' : (typeof field.value === 'number' ? 'number' : 'text')}
-                    value={String(field.value)}
-                    onChange={(e) => {
-                      const value = typeof field.value === 'boolean' ? e.target.checked : (typeof field.value === 'number' ? Number(e.target.value) : e.target.value);
-                      field.value = value as any;
-                    }}
-                  />
-                </td>
-              </tr>
-            ))}
-        </tbody>
-      </table>
+        <table style={{
+          width: '300px',
+          border: '1px solid black',
+          borderCollapse: 'collapse'
+        }}>
+          <thead style={{ borderBottom: '1px solid black' }}>
+            <tr style={{ textAlign: 'center' }}>
+              <td
+                style={{ borderRight: '1px solid black', padding: '10px' }}
+              >Key</td>
+              <td
+                style={{ borderRight: '1px solid black', padding: '10px' }}
+              >Value</td>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              form &&
+              Object.entries(form?.controls).map(([key, field]) => (
+                <tr key={key}
+                  style={{ borderBottom: '1px solid black', textAlign: 'center' }}
+                >
+                  <td style={{ borderRight: '1px solid black' }}>
+                    <label>{key}</label>
+                  </td>
+                  <td>
+                    <input
+                      style={{
+                        border: field.valid ? '1px solid black' : '2px solid red',
+                      }}
+                      type={typeof field.value === 'boolean' ? 'checkbox' : (typeof field.value === 'number' ? 'number' : 'text')}
+                      value={String(field.value)}
+                      onChange={(e) => {
+                        const value = typeof field.value === 'boolean' ? e.target.checked : (typeof field.value === 'number' ? Number(e.target.value) : e.target.value);
+                        field.value = value as any;
+                      }}
+                    />
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+          {!form?.valid && <span style={{ color: '#fe6d73', fontWeight: 'bold' }}>Form is not valid</span>}
+          <button
+            onClick={() => form?.reset()}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
       <span>HMR is working with <pre style={{ display: 'inline' }}>@radioactive/forms</pre> package (<pre style={{ display: 'inline' }}>../../src/index.ts</pre>)!</span>
 
       <h4>Form State (click name to update)</h4>
