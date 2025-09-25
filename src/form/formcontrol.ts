@@ -1,0 +1,80 @@
+import { RequiresHook } from "../state/requires-hook";
+import { PatchValueProps } from "../types/control.types";
+import type { Form, FormState } from "../types/form.types";
+import { ValidatorFn } from "../types/validator.types";
+
+/**
+ * @param T - The type of the value that the FormControl will hold.
+ * @param O - The type this FormControl belongs to.
+ */
+export class FormControl<T, O> extends RequiresHook<Form<O>> implements FormState<T> {
+
+  private _initialValue: T;
+  private _value: T;
+  private _dirty: boolean;
+  private _touched: boolean;
+  private _valid: boolean;
+  private _validators: Array<ValidatorFn<T>>;
+
+  constructor(initialValue: T, validators: Array<ValidatorFn<T>> = [], setState: React.Dispatch<React.SetStateAction<Form<O>>>) {
+    super(setState);
+    this._initialValue = initialValue;
+    this._value = initialValue;
+    this._dirty = false;
+    this._touched = false;
+    this._validators = validators;
+    this._valid = validators.every(validator => validator(this.value)); // Assume valid initially
+  }
+
+  public get value(): T {
+    return this._value;
+  }
+
+  public get dirty(): boolean {
+    return this._dirty;
+  }
+
+  public get touched(): boolean {
+    return this._touched;
+  }
+
+  public get valid(): boolean {
+    return this._valid;
+  }
+
+  public set value(newValue: T) {
+    if (this._value !== newValue) {
+      this.internalUpdate(newValue);
+      this.propagate(this);
+    }
+  }
+
+  public reset(): void {
+    this._value = this._initialValue;
+    this._dirty = false;
+    this._touched = false;
+    this._valid = this._validators.every(validator => validator(this.value));
+    this.propagate(this);
+  }
+
+  public patchValue(newValue: Partial<T>, opts: PatchValueProps = {
+    stateless: false
+  }): void {
+    if (typeof this._value === 'object' && this._value !== null && !Array.isArray(this._value)) {
+      const updatedValue = { ...this._value, ...newValue };
+      this.value = updatedValue as T; // Use the setter to ensure dirty and valid are updated
+    } else {
+      this.value = newValue as T; // For non-object types, just set the value directly
+    }
+    if (!opts.stateless) {
+      this.propagate(this);
+    }
+  }
+
+  private internalUpdate(value: T): void {
+    this._value = value;
+    this._dirty = true;
+    this._touched = true;
+    this._valid = this._validators.every(validator => validator(this.value));
+  }
+}
