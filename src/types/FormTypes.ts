@@ -1,4 +1,10 @@
 interface FormValidator {
     required?: boolean;
     func?: (value: any) => boolean;
+    errorMsg?: string;
+}
+
+interface FormValidatorOut{
+    valid: boolean;
+    errors: string;
 }
