@@ -1,3 +1,5 @@
+export { };
+
 declare global {
   interface Array<T> {
     /**
@@ -21,4 +23,3 @@ Array.prototype.collect = function(fn) {
   return result;
 }
 
-export { };
