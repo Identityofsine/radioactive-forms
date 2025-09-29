@@ -1,8 +1,7 @@
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
-import { useEffect, useState } from 'react'
-import { Form } from '@radioactive/forms'
+import { useForm } from '@radioactive/forms'
 
 type TestForm = {
   name: string;
@@ -12,17 +11,11 @@ type TestForm = {
 
 function App() {
 
-  const [form, setForm] = useState<Form<TestForm>>()
-
-  useEffect(() => {
-    if (!setForm) return;
-    const newForm = new Form<TestForm>({
-      name: ['John Doe', [(value) => value.includes('John')]],
-      age: [30, [(value) => value > 0]],
-      dead: [false]
-    }, setForm as React.Dispatch<React.SetStateAction<Form<TestForm>>>);
-    setForm(newForm)
-  }, [setForm])
+  const { form } = useForm<TestForm>({
+    name: ['John Doe', [(value) => value.includes('John')]],
+    age: [30, [(value) => value > 0]],
+    dead: [false]
+  });
 
   return (
     <>
@@ -43,7 +36,7 @@ function App() {
         marginBottom: '20px'
       }}>
         <table style={{
-          width: '300px',
+          width: '500px',
           border: '1px solid black',
           borderCollapse: 'collapse'
         }}>
@@ -55,6 +48,9 @@ function App() {
               <td
                 style={{ borderRight: '1px solid black', padding: '10px' }}
               >Value</td>
+              <td
+                style={{ borderRight: '1px solid black', padding: '10px' }}
+              >Dirty</td>
             </tr>
           </thead>
           <tbody>
@@ -80,6 +76,13 @@ function App() {
                       }}
                     />
                   </td>
+                  <td style={{ borderLeft: '1px solid black' }}>
+                    <div
+                      onClick={(e) => { e.stopPropagation(); field.dirty = !field.dirty }}
+                    >
+                      {field.dirty ? '✔️' : '❌'}
+                    </div>
+                  </td>
                 </tr>
               ))}
           </tbody>
@@ -87,9 +90,14 @@ function App() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
           {!form?.valid && <span style={{ color: '#fe6d73', fontWeight: 'bold' }}>Form is not valid</span>}
           <button
+            onClick={() => form?.patchValue({ name: 'Jane Doe', age: 45, dead: true })}
+          >
+            Patch Test
+          </button>
+          <button
             onClick={() => form?.reset()}
           >
-            Reset
+            Reset {form?.dirty && '(dirty)'}
           </button>
         </div>
       </div>
