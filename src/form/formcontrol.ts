@@ -1,7 +1,8 @@
 import { RequiresHook } from "../state/requires-hook";
 import { PatchValueProps } from "../types/control.types";
-import type { Form, FormState } from "../types/form.types";
+import type { FormState } from "../types/form.types";
 import { ValidatorFn } from "../types/validator.types";
+import { Form } from "./form";
 
 /**
  * @param T - The type of the value that the FormControl will hold.
@@ -9,6 +10,7 @@ import { ValidatorFn } from "../types/validator.types";
  */
 export class FormControl<T, O> extends RequiresHook<Form<O>> implements FormState<T> {
 
+  private _key: keyof T;
   private _initialValue: T;
   private _value: T;
   private _dirty: boolean;
@@ -16,14 +18,19 @@ export class FormControl<T, O> extends RequiresHook<Form<O>> implements FormStat
   private _valid: boolean;
   private _validators: Array<ValidatorFn<T>>;
 
-  constructor(initialValue: T, validators: Array<ValidatorFn<T>> = [], setState: React.Dispatch<React.SetStateAction<Form<O>>>) {
+  constructor(key: keyof T, initialValue: T, validators: Array<ValidatorFn<T>> = [], setState: React.Dispatch<React.SetStateAction<Form<O>>>) {
     super(setState);
+    this._key = key;
     this._initialValue = initialValue;
     this._value = initialValue;
     this._dirty = false;
     this._touched = false;
     this._validators = validators;
     this._valid = validators.every(validator => validator(this.value)); // Assume valid initially
+  }
+
+  public get key(): keyof T {
+    return this._key;
   }
 
   public get value(): T {
@@ -47,6 +54,11 @@ export class FormControl<T, O> extends RequiresHook<Form<O>> implements FormStat
       this.internalUpdate(newValue);
       this.propagate(this);
     }
+  }
+
+  public set dirty(isDirty: boolean) {
+    this._dirty = isDirty;
+    this.propagate(this);
   }
 
   public reset(): void {

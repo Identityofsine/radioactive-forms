@@ -14,7 +14,7 @@ export function createFormControls<T>(
     const control = form[key];
     if (Array.isArray(control)) {
       const [initialValue, validators = []] = control as [any, Array<ValidatorFn<T>>];
-      controls[key] = new FormControl(initialValue, validators, (control) => {
+      controls[key] = new FormControl(key, initialValue, validators, (control) => {
         setState((oldForm: any) => {
           const controls = Object.assign(oldForm._controls, {
             [key]: control
