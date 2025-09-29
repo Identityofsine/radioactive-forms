@@ -1,3 +1,4 @@
+import * as array from '../util/array.util';
 import { RequiresHook } from "../state/requires-hook";
 import type { FormControlMap, FormControlPrimitive, FormControlPrimitiveMap, TopLevelFormState } from "../types/form.types";
 import { FormControl } from "./formcontrol";
@@ -50,7 +51,7 @@ export class Form<T> extends RequiresHook<Form<T>> implements TopLevelFormState<
   private evaluateState(): void {
     this._dirty = this._flattenedControls.some(control => control.dirty);
     this._touched = this._flattenedControls.some(control => control.touched);
-    this._valid = this._flattenedControls.every(control => control.valid);
+    console.log(this._flattenedControls.collect)
     this.propagate(this);
   }
 
