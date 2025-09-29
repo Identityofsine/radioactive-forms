@@ -26,6 +26,7 @@ export abstract class RequiresHook<T> {
   protected propagate<O extends RequiresHook<any>>(self: O) {
     // Slight delay to batch multiple updates together
     setTimeout(() => {
+      console.dInfo(`Propagating state change for`, self);
       this._setState(self as unknown as T);
     }, 15)
 
