@@ -27,5 +27,7 @@ export class FormControl extends FormControlBase{
     patchValue(val: any){
         this._value = val;
     }
-
+    get value(): any{
+        return this._value;
+    }
 }

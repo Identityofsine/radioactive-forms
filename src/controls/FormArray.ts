@@ -25,4 +25,7 @@ export class FormArray extends FormControlBase{
         return errors;
     }
 
+    get controls(): Array<FormControlBase>{
+        return this._items;
+    }
 }

@@ -24,4 +24,8 @@ export class FormGroup extends FormControlBase{
         }
         return obj;
     }
+
+    get(key:string):FormControlBase | undefined{
+        return this._fields[key];
+    }
 }
