@@ -1,58 +1,101 @@
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-import { form } from '@radioactive/forms'
-import React from 'react'
+import React, { useState } from 'react';
+import { useFormBuilder } from '../../../src/hooks/useFormBuilder';
+import { FormGroupComponent } from '../../../src/contexts/FormGroupComponent';
+import { FormArrayComponent, useFormArray } from '../../../src/contexts/FormArrayComponent';
+import { useFormControl } from '../../../src/hooks/useFormControl';
+import { FormGroup } from '../../../src/controls/FormGroup';
+import { FormArray } from '../../../src/controls/FormArray';
 
 function App() {
+  const { group, control, array } = useFormBuilder();
+  // Custom validator for age > 5
+  const ageValidator = {
+    required: true,
+    func: (val: any) => Number(val) > 5,
+    errorMsg: "Age must be greater than 5."
+  };
+
+  // Build the form structure
+  const [form] = useState(() =>
+    group({
+      userInfo: group({
+        name: control(""),
+        age: control(0, ageValidator)
+      }),
+      email: control(""),
+      phoneNumbers: array(["", ""])
+    })
+  );
+
+  // Get phoneNumbers array
+  const phoneNumbersArray = form.get("phoneNumbers") as FormArray;
+
+  // Validation
+  const ageControl = (form.get("userInfo") as FormGroup).get("age");
+  const ageError = ageControl?.validate().valid ? "" : ageControl?.validate().errors;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    console.log(form.buildObject());
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Radioactive Forms</h1>
-      <table style={{
-        width: '300px',
-        margin: 'auto',
-        border: '1px solid black',
-        borderCollapse: 'collapse'
-      }}>
-        <thead style={{ borderBottom: '1px solid black' }}>
-          <tr style={{ textAlign: 'center' }}>
-            <td
-              style={{ borderRight: '1px solid black', padding: '10px' }}
-            >Key</td>
-            <td
-              style={{ borderRight: '1px solid black', padding: '10px' }}
-            >Value</td>
-          </tr>
-        </thead>
-        <tbody>
-          {
-            Object.entries(form.control).map(([key, field]) => (
-              <tr key={key}
-                style={{ borderBottom: '1px solid black', textAlign: 'center' }}
-              >
-                <td style={{ borderRight: '1px solid black' }}>
-                  <label>{key}</label>
-                </td>
-                <td>
-                  <p>{String(field.value)}</p>
-                </td>
-              </tr>
-            ))}
-        </tbody>
-      </table>
-      <span>HMR is working with <pre style={{ display: 'inline' }}>@radioactive/forms</pre> package (<pre style={{ display: 'inline' }}>../../src/index.ts</pre>)!</span>
-
-    </>
-  )
+    <div>
+      <h1>Radioactive Forms Example</h1>
+      <form onSubmit={handleSubmit}>
+        <FormGroupComponent formgroup={form}>
+          {()=>{
+              
+              return(
+                <div>
+          <FormGroupComponent formgroup={form.get("userInfo") as FormGroup}>
+            {()=>{
+              
+              return(
+                <div>
+                  <label>
+                    Name:
+                    <input type="text" {...useFormControl("name")} />
+                  </label>
+                  <label>
+                    Age:
+                    <input type="number" {...useFormControl("age")} />
+                    {ageError && <span style={{ color: "red" }}>{ageError}</span>}
+                  </label>
+                </div>
+              );
+            }}
+          </FormGroupComponent>
+          {/* <label>
+            Email:
+            <input type="email" {...useFormControl("email")} />
+          </label> */}
+          <FormArrayComponent formarray={phoneNumbersArray}>
+            <div>
+              <label>Phone Numbers:</label>
+              {phoneNumbersArray.controls.map((ctrl, i) => (
+                <div key={i}>
+                  <input
+                    type="text"
+                    value={ctrl.value}
+                    onChange={e => useFormArray().handleItemChange(i, e.target.value)}
+                  />
+                  <button type="button" onClick={() => useFormArray().removeItem(i)}>
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={() => useFormArray().addItem("")}>Add Phone</button>
+            </div>
+          </FormArrayComponent>
+          <button type="submit">Submit</button>
+          </div>
+          );
+            }}
+        </FormGroupComponent>
+      </form>
+    </div>
+  );
 }
 
-export default App
+export default App;

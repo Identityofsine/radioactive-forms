@@ -6,4 +6,7 @@ export class FormControlBase{
     buildObject(): any{
         return null;
     }
+    get value(): any{
+        return null;
+    }
 }

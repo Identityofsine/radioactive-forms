@@ -11,7 +11,7 @@ const FormGroupContext = createContext<FormGroupContextValue | undefined>(undefi
 
 interface Props {
     formgroup: FormGroup;
-    children: ReactNode;
+    children: ReactNode |(()=>ReactNode);
 }
 
 export function FormGroupComponent({ formgroup, children }: Props):ReactElement {
@@ -26,7 +26,7 @@ export function FormGroupComponent({ formgroup, children }: Props):ReactElement 
     };
     return (
         <FormGroupContext.Provider value={{ formgroup, handleChange }}>
-            {children}
+            {typeof children === "function" ? (children as () => ReactNode)() : children}
         </FormGroupContext.Provider>
     );
 }
