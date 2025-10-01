@@ -11,9 +11,20 @@ export interface TopLevelFormState<T> extends FormState<T> {
 }
 
 export interface ControlFormState<T> extends FormState<T> {
+
+}
+
+export interface Cloneable {
+  clone(): this;
 }
 
 export type FormControlPrimitive<T> = [T | undefined | null] | [T | undefined | null, ValidatorFn<T>[]];
+
+export type FormControlNonArrayPrimitive<T> = T | undefined | null | FormControlPrimitive<T>;
+
+export type FormControlNonArrayPrimitiveMap<T> = {
+  [K in keyof T]: FormControlNonArrayPrimitive<T[K]>;
+}
 
 export type FormControlPrimitiveMap<T> = {
   [K in keyof T]: FormControlPrimitive<T[K]>;
