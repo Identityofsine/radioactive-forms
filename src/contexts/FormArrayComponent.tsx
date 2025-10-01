@@ -13,7 +13,7 @@ const FormArrayContext = createContext<FormArrayContextValue | undefined>(undefi
 
 interface Props {
     formarray: FormArray;
-    children: ReactNode;
+    children: ReactNode | (()=>ReactNode);
 }
 
 export function FormArrayComponent({ formarray, children }: Props): ReactElement {
@@ -39,7 +39,7 @@ export function FormArrayComponent({ formarray, children }: Props): ReactElement
 
     return (
         <FormArrayContext.Provider value={{ formarray, handleItemChange, addItem, removeItem }}>
-            {children}
+            {typeof children === "function" ? (children as () => ReactNode)() : children}
         </FormArrayContext.Provider>
     );
 }

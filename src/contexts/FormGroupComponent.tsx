@@ -19,6 +19,7 @@ export function FormGroupComponent({ formgroup, children }: Props):ReactElement 
 
     const handleChange = (name: string, value: any) => {
         const control = formgroup.get(name);
+        console.log("test")
         if (control) {
             (control as FormControl).patchValue(value);
             setVersion(v => v + 1); // redraw this section

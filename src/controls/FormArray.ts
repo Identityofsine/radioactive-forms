@@ -5,15 +5,7 @@ export class FormArray extends FormControlBase{
     private _items: Array<FormControlBase> = [];
     constructor(arr: any[]){
         super();
-        for (const item of arr) {
-            if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
-                this._items.push(new FormGroup(item));
-            } else if(Array.isArray(item)){
-                this._items.push(new FormArray(item));
-            }else{
-                this._items.push(new FormControl(item));
-            }
-        }
+        this._items = arr;
     }
 
     validate(): any[] {
@@ -23,6 +15,10 @@ export class FormArray extends FormControlBase{
             errors.push(item.validate());
         }
         return errors;
+    }
+
+    buildObject() {
+        return this._items.map(item => item.buildObject());
     }
 
     get controls(): Array<FormControlBase>{
