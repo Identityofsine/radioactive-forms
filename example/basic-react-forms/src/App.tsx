@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useFormBuilder } from '../../../src/hooks/useFormBuilder';
-import { FormGroupComponent } from '../../../src/contexts/FormGroupComponent';
+import { FormGroupComponent, useFormGroup } from '../../../src/contexts/FormGroupComponent';
 import { FormArrayComponent, useFormArray } from '../../../src/contexts/FormArrayComponent';
 import { useFormControl } from '../../../src/hooks/useFormControl';
 import { FormGroup } from '../../../src/controls/FormGroup';
 import { FormArray } from '../../../src/controls/FormArray';
 import { FormFieldComponent } from '../../../src/components/FormFieldComponent';
+import { FormErrorComponent } from '../../../src/components/FormErrorComponent';
 function App() {
   const { group, control, array } = useFormBuilder();
   // Custom validator for age > 5
@@ -20,7 +21,7 @@ function App() {
     group({
       userInfo: group({
         name: control(""),
-        age: control(0, ageValidator)
+        age: control(1, ageValidator)
       }),
       email: control(""),
       phoneNumbers: array(["", ""])
@@ -29,10 +30,6 @@ function App() {
 
   // Get phoneNumbers array
   const phoneNumbersArray = form.get("phoneNumbers") as FormArray;
-
-  // Validation
-  const ageControl = (form.get("userInfo") as FormGroup).get("age");
-  const ageError = ageControl?.validate().valid ? "" : ageControl?.validate().errors;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,7 +54,7 @@ function App() {
                     <FormFieldComponent name="age">
                       <input type="number" />
                     </FormFieldComponent>
-                    {ageError && <span style={{ color: "red" }}>{ageError}</span>}
+                    <FormErrorComponent name="age"/>
                   </label>
                 </div>
           </FormGroupComponent>
@@ -75,7 +72,7 @@ function App() {
                   <input type="text" />
                 </FormFieldComponent>
               ))}
-              <button type="button" onClick={() => useFormArray().addItem("")}>Add Phone</button>
+              <button type="button" onClick={() => useFormArray().addItem("")}>Add Phone (This Dont Work yet)</button>
             </div>
           </FormArrayComponent>
           <button type="submit">Submit</button>
