@@ -54,15 +54,15 @@ function App() {
                     <FormFieldComponent name="age">
                       <input type="number" />
                     </FormFieldComponent>
-                    <FormErrorComponent name="age"/>
+                    <FormErrorComponent name="age" noText onError={()=>{console.log("error")}}/>
                   </label>
                 </div>
           </FormGroupComponent>
           <label>
             Email:
            <FormFieldComponent name="email">
-                      <input type="text" />
-                    </FormFieldComponent>
+              <input type="text" />
+            </FormFieldComponent>
           </label>
           <FormArrayComponent formarray={phoneNumbersArray}>
             <div>
