@@ -54,7 +54,9 @@ function App() {
                     <FormFieldComponent name="age">
                       <input type="number" />
                     </FormFieldComponent>
-                    <FormErrorComponent name="age" noText onError={()=>{console.log("error")}}/>
+                    {/* <FormErrorComponent name="age" noText onError={()=>{console.log("error")}}/> */}
+                    <FormErrorComponent name="age" onError={()=>{console.log("error")}}/>
+                    {/* <FormErrorComponent name="age" errorComponent={<div>This is an error</div>} onError={()=>{console.log("error")}}/> */}
                   </label>
                 </div>
           </FormGroupComponent>
