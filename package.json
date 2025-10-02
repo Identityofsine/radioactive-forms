@@ -1,11 +1,10 @@
 {
   "name": "@identityofsine/radioactive-forms",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Powerful forms for React",
   "main": "src/index.ts",
   "scripts": {
     "dev": "concurrently \"npm run dev:example\" \"npm run dev:library\"",
-    "build:watch": "tsc -p tsconfig.json -w",
     "example:dev": "cd example/basic-react-forms/ && npm run dev",
     "example:install": "cd example/basic-react-forms/ && npm install"
   },
@@ -30,7 +29,6 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "react": "^19.1.1",
-    "tsc": "^2.0.4"
+    "react": "^19.1.1"
   }
 }
