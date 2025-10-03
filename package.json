@@ -1,11 +1,10 @@
 {
-  "name": "@radioactive/forms",
-  "version": "0.0.1",
+  "name": "@identityofsine/radioactive-forms",
+  "version": "0.0.3",
   "description": "Powerful forms for React",
-  "main": "index.js",
+  "main": "src/index.ts",
   "scripts": {
     "dev": "concurrently \"npm run dev:example\" \"npm run dev:library\"",
-    "build:watch": "tsc -p tsconfig.json -w",
     "example:dev": "cd example/basic-react-forms/ && npm run dev",
     "example:install": "cd example/basic-react-forms/ && npm install"
   },
@@ -18,17 +17,18 @@
     "react",
     "radioactive-forms"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Kevin Erdogan & Justin Zhang",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/Identityofsine/radioactive-forms/issues"
   },
   "homepage": "https://github.com/Identityofsine/radioactive-forms#readme",
   "devDependencies": {
+    "@types/react": "^19.1.13",
     "concurrently": "^9.2.1",
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "tsc": "^2.0.4"
+    "react": "^19.1.1"
   }
 }

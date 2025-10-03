@@ -3,6 +3,7 @@
   "compilerOptions": {
     "target": "es2022",
     "lib": [
+      "node",
       "dom",
       "es2022"
     ],
@@ -16,6 +17,7 @@
     "rootDir": "src",
     "strict": true,
     "exactOptionalPropertyTypes": true,
+    "strictNullChecks": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
