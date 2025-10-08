@@ -68,7 +68,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     this._dirty = false;
     this._touched = false;
     this._valid = this._validators.every((validator) => validator(this.value));
-    this.propagate(this);
+    this.propagate(this.clone());
   }
 
   public override get readonly(): boolean {
@@ -80,7 +80,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
       return;
     }
     this._readonly = isReadonly;
-    this.propagate(this);
+    this.propagate(this.clone());
   }
 
   public patchValue(

@@ -93,9 +93,6 @@ export class Form<T> extends BaseForm<T, Form<T>> {
   }
 
   override set readonly(value: boolean) {
-    if (this._readonly === value) {
-      return;
-    }
     this._readonly = value;
     this._flattenedControls.forEach((control) => (control.readonly = value));
     console.dLog(

@@ -68,7 +68,10 @@ export function createFormControl<T>(
           Object.getPrototypeOf(oldForm),
         ),
           oldForm,
-          { _controls: controls }
+          {
+            _controls: controls,
+            _flattenedControls: Object.values(controls)
+          }
         );
         return obj;
       }
