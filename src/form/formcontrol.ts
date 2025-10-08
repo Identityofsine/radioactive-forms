@@ -79,6 +79,15 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     if (this._readonly === isReadonly) {
       return;
     }
+    if (this._contains_a_form) {
+      if (Array.isArray(this._value)) {
+        this._value.forEach((item) => {
+          item.readonly = isReadonly;
+        });
+      } else {
+        (this._value as Form<any>).readonly = isReadonly;
+      }
+    }
     this._readonly = isReadonly;
     this.propagate(this.clone());
   }
