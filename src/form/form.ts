@@ -1,4 +1,4 @@
-import {} from "../util";
+import { } from "../util";
 import { RequiresHook } from "../state/requires-hook";
 import type {
   Cloneable,
@@ -85,9 +85,17 @@ export class Form<T> extends BaseForm<T, Form<T>> {
       this.propagate(updatedForm);
     });
     this._controls = Object.assign(this._controls, newControls);
+    this._flattenedControls = Object.values(this._controls ?? {}) || [];
+  }
+
+  override get readonly(): boolean {
+    return this._readonly;
   }
 
   override set readonly(value: boolean) {
+    if (this._readonly === value) {
+      return;
+    }
     this._readonly = value;
     this._flattenedControls.forEach((control) => (control.readonly = value));
     console.dLog(

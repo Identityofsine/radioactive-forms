@@ -51,6 +51,9 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
   }
 
   set readonly(value: boolean) {
+    if (this._readonly === value) {
+      return;
+    }
     this._readonly = value;
     // Use clone to ensure React detects the change
     this.propagate(this.clone());

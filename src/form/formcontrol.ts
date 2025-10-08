@@ -71,7 +71,14 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     this.propagate(this);
   }
 
+  public override get readonly(): boolean {
+    return this._readonly;
+  }
+
   public set readonly(isReadonly: boolean) {
+    if (this._readonly === isReadonly) {
+      return;
+    }
     this._readonly = isReadonly;
     this.propagate(this);
   }
@@ -88,9 +95,9 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
       !Array.isArray(this._value)
     ) {
       const updatedValue = { ...this._value, ...newValue };
-      this._value = updatedValue as T;
+      this.value = updatedValue as T; // Use the setter to ensure dirty and valid are updated
     } else {
-      this._value = newValue as T;
+      this.value = newValue as T; // For non-object types, just set the value directly
     }
     if (!opts.stateless) {
       this.propagate(this);
@@ -99,14 +106,13 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
 
   protected override internalUpdate(value: T): void {
     this._value = value;
-    this.handleFormObject();
+    this.handleNewFormObject();
     this._dirty = true;
     this._touched = true;
     this._valid = this._validators.every((validator) => validator(this.value));
   }
 
-  // this updates and sets up hooks for nested forms if needed
-  private handleFormObject(): void {
+  private handleNewFormObject(): void {
     const currentValue = this._value;
     if (!(Array.isArray(currentValue) || BaseForm.isFormLike(currentValue))) {
       return;
@@ -117,24 +123,24 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
       const arr = (currentValue as Array<unknown>).filter(
         (item): item is Form<any> => Form.isForm(item),
       );
-      assignHooklessFormArray.bind(this)(
-        arr,
-        () => this as unknown as FormControl<Form<any>[], any>,
-      );
+      const needsAnyHook = arr.some((f) => BaseForm.needsHook(f));
+      if (needsAnyHook) {
+        assignHooklessFormArray.bind(this)(
+          arr,
+          () => this as unknown as FormControl<Form<any>[], any>,
+        );
+      }
       return;
     }
     // Single nested form
     if (Form.isForm(currentValue) && BaseForm.needsHook(currentValue)) {
       const primitiveControls = (currentValue as any).__primitiveControls;
-      this.patchValue(
-        new Form(primitiveControls, (oldState) => {
-          const oldFormCached = this.value as unknown as Form<any>;
-          const val: Form<any> =
-            typeof oldState === "function" ? oldState(oldFormCached) : oldState;
-          this.value = val as unknown as T;
-        }) as unknown as T,
-        { stateless: true },
-      );
+      this.value = new Form(primitiveControls, (oldState) => {
+        const oldFormCached = this.value as unknown as Form<any>;
+        const val: Form<any> =
+          typeof oldState === "function" ? oldState(oldFormCached) : oldState;
+        this.value = val as unknown as T;
+      }) as unknown as T;
     }
   }
 

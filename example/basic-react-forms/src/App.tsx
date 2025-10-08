@@ -168,6 +168,16 @@ function App() {
           >
             Reset {form?.dirty && '(dirty)'}
           </button>
+          <button
+            style={{ backgroundColor: form?.readonly ? '#4caf50' : undefined, color: form?.readonly ? 'white' : undefined }}
+            onClick={() => {
+              if (!form) return;
+              console.log(form.readonly)
+              form.readonly = !form.readonly
+            }}
+          >
+            Set Readonly
+          </button>
         </div>
       </div>
 
