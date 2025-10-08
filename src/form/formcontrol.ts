@@ -2,24 +2,21 @@ import { RequiresHook } from "../state/requires-hook";
 import { PatchValueProps } from "../types/control.types";
 import type { Cloneable, FormState } from "../types/form.types";
 import { ValidatorFn } from "../types/validator.types";
+import { BaseForm } from "./base-form";
 import { Form } from "./form";
+import { assignHooklessFormArray } from "./util/form-control.util";
 
 /**
  * @param T - The type of the value that the FormControl will hold.
  * @param O - The type this FormControl belongs to.
  */
-export class FormControl<T, O>
-  extends RequiresHook<Form<O>>
-  implements FormState<T>, Cloneable {
+export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   private readonly __form_control = true;
+  private _contains_a_form: boolean = false;
   private _key: keyof T;
   private _initialValue: T;
   private _value: T;
-  private _dirty: boolean;
-  private _touched: boolean;
-  private _valid: boolean;
   private _validators: Array<ValidatorFn<T>>;
-  private _readonly: boolean = false;
 
   constructor(
     key: keyof T,
@@ -49,22 +46,6 @@ export class FormControl<T, O>
     return this._value;
   }
 
-  public get dirty(): boolean {
-    return this._dirty;
-  }
-
-  public get touched(): boolean {
-    return this._touched;
-  }
-
-  public get valid(): boolean {
-    return this._valid;
-  }
-
-  public get readonly(): boolean {
-    return this._readonly;
-  }
-
   public set value(newValue: T) {
     if (this._value !== newValue) {
       this.internalUpdate(newValue);
@@ -72,13 +53,18 @@ export class FormControl<T, O>
     }
   }
 
-  public set dirty(isDirty: boolean) {
-    this._dirty = isDirty;
-    this.propagate(this);
-  }
-
   public reset(): void {
-    this._value = this._initialValue;
+    if (this._contains_a_form) {
+      if (Array.isArray(this._value)) {
+        this._value.forEach((item) => {
+          item.reset();
+        });
+      } else {
+        (this._value as Form<any>).reset();
+      }
+    } else {
+      this._value = this._initialValue;
+    }
     this._dirty = false;
     this._touched = false;
     this._valid = this._validators.every((validator) => validator(this.value));
@@ -88,11 +74,6 @@ export class FormControl<T, O>
   public set readonly(isReadonly: boolean) {
     this._readonly = isReadonly;
     this.propagate(this);
-  }
-
-  public clone(): this {
-    const obj = Object.create(Object.getPrototypeOf(this));
-    return Object.assign(obj, this);
   }
 
   public patchValue(
@@ -107,19 +88,57 @@ export class FormControl<T, O>
       !Array.isArray(this._value)
     ) {
       const updatedValue = { ...this._value, ...newValue };
-      this.value = updatedValue as T; // Use the setter to ensure dirty and valid are updated
+      this._value = updatedValue as T;
     } else {
-      this.value = newValue as T; // For non-object types, just set the value directly
+      this._value = newValue as T;
     }
     if (!opts.stateless) {
       this.propagate(this);
     }
   }
 
-  private internalUpdate(value: T): void {
+  protected override internalUpdate(value: T): void {
     this._value = value;
+    this.handleFormObject();
     this._dirty = true;
     this._touched = true;
     this._valid = this._validators.every((validator) => validator(this.value));
+  }
+
+  // this updates and sets up hooks for nested forms if needed
+  private handleFormObject(): void {
+    const currentValue = this._value;
+    if (!(Array.isArray(currentValue) || BaseForm.isFormLike(currentValue))) {
+      return;
+    }
+    this._contains_a_form = true;
+    // Array of forms: only rehook if any child needs a hook
+    if (Array.isArray(currentValue)) {
+      const arr = (currentValue as Array<unknown>).filter(
+        (item): item is Form<any> => Form.isForm(item),
+      );
+      assignHooklessFormArray.bind(this)(
+        arr,
+        () => this as unknown as FormControl<Form<any>[], any>,
+      );
+      return;
+    }
+    // Single nested form
+    if (Form.isForm(currentValue) && BaseForm.needsHook(currentValue)) {
+      const primitiveControls = (currentValue as any).__primitiveControls;
+      this.patchValue(
+        new Form(primitiveControls, (oldState) => {
+          const oldFormCached = this.value as unknown as Form<any>;
+          const val: Form<any> =
+            typeof oldState === "function" ? oldState(oldFormCached) : oldState;
+          this.value = val as unknown as T;
+        }) as unknown as T,
+        { stateless: true },
+      );
+    }
+  }
+
+  public static isFormControl(obj: any): obj is FormControl<any, any> {
+    return obj && obj.__form_control === true;
   }
 }
