@@ -18,9 +18,14 @@ export function createFormControls<T>(
     if (Array.isArray(control) && control.length > 0 && (
       control.length === 1 ||
       (control.length === 2 && isValidatorArray<T>(control[1]))
-    )) {
+    ) && !control.some(item => BaseForm.isFormLike(item))) {
       const [initialValue, validators = []] = control as [any, Array<ValidatorFn<T>>];
       controls[key] = createFormControl(key, initialValue, validators, setState);
+    } else if (Array.isArray(control) && control.length >= 1 && control.some(item => BaseForm.isFormLike(item))) {
+      // handle array of forms
+      const formsArray = control as Array<Form<any>>;
+      controls[key] = createFormControl<T>(key, control as any, [], setState);
+      assignHooklessFormArray(formsArray, () => controls[key] as FormControl<any, any>);
     } else if (BaseForm.isFormLike(control)) {
       // handle nested forms
       if (Form.isForm(control) && Form.needsHook(control)) {
@@ -70,6 +75,43 @@ export function createFormControl<T>(
       );
     }
   }) as FormControl<any, T>;
+}
+
+export function assignHooklessFormArray<T>(
+  arr: Array<Form<T>>,
+  controlFactory: () => FormControl<Form<T>[], any>
+): void {
+  const control = controlFactory();
+  control.patchValue((arr as Array<Form<any>>).map((formInstance, index) => {
+
+    const setState = ((oldState: any) => {
+      const control = controlFactory();
+      const oldFormCached = () => (control.value as Array<Form<T>>)[index];
+      const value: Form<T> = typeof oldState === 'function' ? oldState(oldFormCached()) : oldState;
+      if (!Array.isArray(control.value)) {
+        return;
+      }
+      const currentArray = control.value as Array<Form<any>>;
+      const nextArray = currentArray.slice();
+      nextArray[index] = value; // preserve instance; only replace changed slot
+      control.patchValue(
+        nextArray
+      );
+    })
+
+    if (BaseForm.needsHook(formInstance)) {
+      const newForm = new Form<any>(
+        (formInstance as any).__primitiveControls,
+        setState
+      );
+      return newForm;
+    } else {
+      Object.assign(formInstance, { _setState: setState });
+      return formInstance;
+    }
+  }), {
+    stateless: true
+  });
 }
 
 export function isValidatorArray<T>(arr: any): arr is Array<ValidatorFn<T>> {

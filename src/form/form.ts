@@ -45,7 +45,7 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     this.__primitiveControls = controls;
     this._controls = createFormControls(controls, (updatedForm) => {
       this.internalUpdate();
-      setState?.(updatedForm);
+      this._setState?.(updatedForm);
     });
     this._flattenedControls = Object.values(this._controls ?? {}) || [];
     this._dirty = false;

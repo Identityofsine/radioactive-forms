@@ -1,12 +1,91 @@
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
-import { useForm } from '@radioactive/forms'
+import { Form, formGroup, useForm } from '@radioactive/forms'
 
 type TestForm = {
   name: string;
   age: number;
   dead: boolean;
+  forms: {
+    nestedName: string;
+  }
+  groups: Array<Form<{ nestedName: string }>>
+}
+
+function isFormInstance(value: unknown): value is Form<unknown> {
+  return Form.isForm(value);
+}
+
+type AnyControlLike = { value: unknown; valid: boolean; dirty: boolean };
+
+function renderFormRows<T>(form: Form<T>, keyPrefix: string = ''): Array<React.ReactElement> {
+  const controls = (form as unknown as { controls: Record<string, AnyControlLike> }).controls;
+  return Object.entries(controls).flatMap(([key, field]: [string, AnyControlLike]) => {
+    const value = field.value;
+
+    if (Array.isArray(value) && value.some(isFormInstance)) {
+      const headerRow = (
+        <tr key={`${keyPrefix}${key}`} style={{ borderBottom: '1px solid black', textAlign: 'center' }}>
+          <td style={{ borderRight: '1px solid black' }}>
+            <label>{key}</label>
+          </td>
+          <td colSpan={2} style={{ textAlign: 'left', padding: '6px' }}>
+            Array of Forms ({value.length})
+          </td>
+        </tr>
+      );
+      const childRows = (value as Array<Form<unknown>>).flatMap((childForm, idx) =>
+        renderFormRows(childForm, `${keyPrefix}${key}[${idx}].`)
+      );
+      return [headerRow, ...childRows];
+    }
+
+    if (isFormInstance(value)) {
+      const headerRow = (
+        <tr key={`${keyPrefix}${key}`} style={{ borderBottom: '1px solid black', textAlign: 'center' }}>
+          <td style={{ borderRight: '1px solid black' }}>
+            <label>{key}</label>
+          </td>
+          <td colSpan={2} style={{ textAlign: 'left', padding: '6px' }}>
+            Nested Form
+          </td>
+        </tr>
+      );
+      const childRows = renderFormRows(value, `${keyPrefix}${key}.`);
+      return [headerRow, ...childRows];
+    }
+
+    return [
+      <tr key={`${keyPrefix}${key}`} style={{ borderBottom: '1px solid black', textAlign: 'center' }}>
+        <td style={{ borderRight: '1px solid black' }}>
+          <label>{key}</label>
+        </td>
+        <td>
+          <input
+            style={{
+              border: field.valid ? '1px solid black' : '2px solid red',
+            }}
+            type={typeof field.value === 'boolean' ? 'checkbox' : (typeof field.value === 'number' ? 'number' : 'text')}
+            value={String(field.value)}
+            onChange={(e) => {
+              const parsedValue = typeof field.value === 'boolean'
+                ? e.currentTarget.checked
+                : (typeof field.value === 'number'
+                  ? Number(e.currentTarget.value)
+                  : e.currentTarget.value);
+              field.value = parsedValue as typeof field.value;
+            }}
+          />
+        </td>
+        <td style={{ borderLeft: '1px solid black' }}>
+          <div onClick={(e) => { e.stopPropagation(); field.dirty = !field.dirty }}>
+            {field.dirty ? '✔️' : '❌'}
+          </div>
+        </td>
+      </tr>
+    ];
+  });
 }
 
 function App() {
@@ -14,7 +93,14 @@ function App() {
   const { form } = useForm<TestForm>({
     name: ['John Doe', [(value) => value.includes('John')]],
     age: [30, [(value) => value > 0]],
-    dead: [false]
+    dead: [false],
+    forms: formGroup<{ nestedName: string }>({
+      nestedName: 'Nested John',
+    }),
+    groups: [
+      formGroup<{ nestedName: string }>({ nestedName: 'Group A' }),
+      formGroup<{ nestedName: string }>({ nestedName: 'Group B' }),
+    ]
   });
 
   return (
@@ -54,37 +140,7 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {
-              form &&
-              Object.entries(form?.controls).map(([key, field]) => (
-                <tr key={key}
-                  style={{ borderBottom: '1px solid black', textAlign: 'center' }}
-                >
-                  <td style={{ borderRight: '1px solid black' }}>
-                    <label>{key}</label>
-                  </td>
-                  <td>
-                    <input
-                      style={{
-                        border: field.valid ? '1px solid black' : '2px solid red',
-                      }}
-                      type={typeof field.value === 'boolean' ? 'checkbox' : (typeof field.value === 'number' ? 'number' : 'text')}
-                      value={String(field.value)}
-                      onChange={(e) => {
-                        const value = typeof field.value === 'boolean' ? e.target.checked : (typeof field.value === 'number' ? Number(e.target.value) : e.target.value);
-                        field.value = value as any;
-                      }}
-                    />
-                  </td>
-                  <td style={{ borderLeft: '1px solid black' }}>
-                    <div
-                      onClick={(e) => { e.stopPropagation(); field.dirty = !field.dirty }}
-                    >
-                      {field.dirty ? '✔️' : '❌'}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+            {form && renderFormRows(form)}
           </tbody>
         </table>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
@@ -93,6 +149,19 @@ function App() {
             onClick={() => form?.patchValue({ name: 'Jane Doe', age: 45, dead: true })}
           >
             Patch Test
+          </button>
+          <button
+            onClick={() => {
+              const groupsCtrl = form?.getControl('groups');
+              if (!groupsCtrl) return;
+              const arr = groupsCtrl.value
+              arr.push(
+                formGroup<{ nestedName: string }>({ nestedName: `Group ${((groupsCtrl.value || []).length) + 1}` })
+              )
+              groupsCtrl.value = arr.slice();
+            }}
+          >
+            Add Group
           </button>
           <button
             onClick={() => form?.reset()}
