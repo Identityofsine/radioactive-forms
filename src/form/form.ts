@@ -11,42 +11,43 @@ import type {
 } from "../types/form.types";
 import { FormControl } from "./formcontrol";
 import { createFormControls } from "./util/form-control.util";
+import { BaseForm } from "./base-form";
 
-export class Form<T>
-  extends RequiresHook<Form<T>>
-  implements TopLevelFormState<T>, Cloneable {
+type AcceptedControls<T> =
+  | FormControlMap<T>
+  | FormControlPrimitiveMap<T>
+  | FormControlNonArrayPrimitiveMap<T>;
 
+export class Form<T> extends BaseForm<T, Form<T>> {
   private readonly __form = true;
+  private readonly __primitiveControls: AcceptedControls<T>;
   private _controls: FormControlMap<T>;
   private _flattenedControls: FormControl<any, T>[];
-  private _dirty: boolean;
-  private _touched: boolean;
-  private _valid: boolean;
   private _invalids: FormControl<any, T>[] = [];
-  private _readonly: boolean;
 
   constructor(
     controls: FormControlNonArrayPrimitiveMap<T>,
-    setState: React.Dispatch<React.SetStateAction<Form<T>>>,
+    setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
   );
   constructor(
     controls: FormControlPrimitiveMap<T>,
-    setState: React.Dispatch<React.SetStateAction<Form<T>>>,
+    setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
   );
   constructor(
     controls: FormControlMap<T>,
-    setState: React.Dispatch<React.SetStateAction<Form<T>>>,
+    setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
   );
   constructor(
-    controls: FormControlMap<T> | FormControlPrimitiveMap<T> | FormControlNonArrayPrimitiveMap<T>,
-    setState: React.Dispatch<React.SetStateAction<Form<T>>>,
+    controls: AcceptedControls<T>,
+    setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
   ) {
     super(setState);
+    this.__primitiveControls = controls;
     this._controls = createFormControls(controls, (updatedForm) => {
-      this.evaluateState();
-      setState(updatedForm);
+      this.internalUpdate();
+      this._setState?.(updatedForm);
     });
-    this._flattenedControls = Object.values(this._controls);
+    this._flattenedControls = Object.values(this._controls ?? {}) || [];
     this._dirty = false;
     this._touched = false;
     this._valid = true;
@@ -57,28 +58,8 @@ export class Form<T>
     return this._controls;
   }
 
-  get dirty(): boolean {
-    return this._dirty;
-  }
-
-  get touched(): boolean {
-    return this._touched;
-  }
-
-  get valid(): boolean {
-    return this._valid;
-  }
-
-  get readonly(): boolean {
-    return this._readonly;
-  }
-
   get invalids(): FormControl<any, T>[] {
     return this._invalids;
-  }
-
-  get formInitialized(): boolean {
-    return this.__form;
   }
 
   public getControl<K extends keyof T>(
@@ -87,7 +68,31 @@ export class Form<T>
     return this._controls?.[key] as FormControl<T[K], T> | undefined;
   }
 
-  set readonly(value: boolean) {
+  public addControls<T>(controlMap: AcceptedControls<T>): void {
+    const foundKey = Object.keys(controlMap).find(
+      (key) => key in this._controls,
+    );
+    if (foundKey?.length > 0) {
+      console.dError(
+        `Form with controls:`,
+        this._controls,
+        `. Control with key: ${String(foundKey)} already exists.`,
+      );
+      return;
+    }
+    const newControls = createFormControls(controlMap, (updatedForm) => {
+      this.internalUpdate();
+      this.propagate(updatedForm);
+    });
+    this._controls = Object.assign(this._controls, newControls);
+    this._flattenedControls = Object.values(this._controls ?? {}) || [];
+  }
+
+  override get readonly(): boolean {
+    return this._readonly;
+  }
+
+  override set readonly(value: boolean) {
     this._readonly = value;
     this._flattenedControls.forEach((control) => (control.readonly = value));
     console.dLog(
@@ -111,7 +116,15 @@ export class Form<T>
         console.dLog(
           `Patching value for key: ${key} with value: ${values[key]}`,
         );
-        controlKey.value = values[key] as T[Extract<keyof T, string>];
+        if (Form.isForm(controlKey.value)) {
+          (controlKey.value as Form<any>).patchValue(
+            values[key] as Partial<any>,
+          );
+          continue;
+        }
+        (controlKey as FormControl<T[keyof T], T>).value = values[
+          key
+        ] as T[Extract<keyof T, string>];
       } else {
         console.dError(
           `Form with controls:`,
@@ -126,36 +139,47 @@ export class Form<T>
     const result = {} as T;
     for (const key in this._controls) {
       const value = this._controls[key].value;
-      if (value && typeof value === 'object' && value !== null && (value as any).__form) {
-        (result[key]) = (value as unknown as Form<any>).build();
-      } else if (Array.isArray(value) && value.length > 0 && (value[0] as any).__form_control) {
-        // if it's an array of FormControls
-        result[key] = value.map((vc) => (vc as unknown as FormControl<any, any>).value) as any;
-      }
-      else {
-        result[key] = value;
+      if (
+        value &&
+        typeof value === "object" &&
+        value !== null &&
+        (value as any).__form
+      ) {
+        result[key] = (value as unknown as Form<any>).build();
+      } else if (Array.isArray(value) && value.length > 0) {
+        // check if form control array
+        if (FormControl.isFormControl(value[0])) {
+          result[key] = value.map(
+            (v) => (v as unknown as FormControl<any, any>).value,
+          ) as any;
+        } else if (Form.isForm(value[0])) {
+          // list of forms
+          result[key] = value.map((v) =>
+            (v as unknown as Form<any>).build(),
+          ) as any;
+        }
+      } else {
+        result[key] = value as any;
       }
     }
     return result;
   }
 
-  public clone(): this {
-    // Create a new Form instance
-    const newObj = Object.create(Object.getPrototypeOf(this)) as this;
-
-    Object.assign(newObj, this);
-
-    return newObj;
+  public static isForm(obj: any): obj is Form<any> {
+    return obj && obj.__form === true;
   }
 
   // TODO: improve this significantly
-  private evaluateState(): void {
-    this._dirty = this._flattenedControls.some((control) => control.dirty);
-    this._touched = this._flattenedControls.some((control) => control.touched);
-    const invalidControls = this._flattenedControls.collect(
+  protected override internalUpdate(): void {
+    if (this._flattenedControls === undefined) {
+      this._flattenedControls = Object.values(this._controls ?? {}) || [];
+    }
+    this._dirty = this._flattenedControls?.some((control) => control.dirty);
+    this._touched = this._flattenedControls?.some((control) => control.touched);
+    const invalidControls = this._flattenedControls?.collect(
       (control) => !control.valid,
     );
-    this._valid = invalidControls.length === 0;
+    this._valid = invalidControls?.length === 0;
     this._invalids = invalidControls;
 
     // Use clone to ensure React detects the change

@@ -24,9 +24,11 @@ export abstract class RequiresHook<T> {
   }
 
   protected propagate<O extends RequiresHook<any>>(self: O) {
-    // Slight delay to batch multiple updates together
-    console.dInfo(`Propagating state change for`, self);
-    this._setState(self as unknown as T);
+    // Only propagate if a setState hook is provided
+    if (typeof this._setState === 'function') {
+      console.dInfo(`Propagating state change for`, self);
+      this._setState(self as unknown as T);
+    }
   }
 
 }
