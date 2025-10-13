@@ -3,9 +3,11 @@
   "compilerOptions": {
     "target": "es2022",
     "lib": [
-      "node",
       "dom",
       "es2022"
+    ],
+    "types": [
+      "node"
     ],
     "module": "esnext",
     "moduleResolution": "node",
