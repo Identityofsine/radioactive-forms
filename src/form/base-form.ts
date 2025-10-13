@@ -16,6 +16,7 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
   protected _touched: boolean = false;
   protected _valid: boolean = true;
   protected _readonly: boolean = false;
+  protected _disabled: boolean = false;
 
   public constructor(setState?: React.Dispatch<React.SetStateAction<Z>>) {
     super(setState);
@@ -32,6 +33,10 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
 
   get dirty(): boolean {
     return this._dirty;
+  }
+
+  get disabled(): boolean {
+    return this._disabled;
   }
 
   get touched(): boolean {
@@ -55,6 +60,15 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
       return;
     }
     this._readonly = value;
+    // Use clone to ensure React detects the change
+    this.propagate(this.clone());
+  }
+
+  set disabled(value: boolean) {
+    if (this._disabled === value) {
+      return;
+    }
+    this._disabled = value;
     // Use clone to ensure React detects the change
     this.propagate(this.clone());
   }
