@@ -3,7 +3,7 @@ import { ValidatorFn } from "../types/validator.types";
 import { BaseForm } from "./base-form";
 import { Form } from "./form";
 import { assignHooklessFormArray } from "./util/form-control.util";
-import {} from "../util";
+import { } from "../util";
 
 /**
  * @param T - The type of the value that the FormControl will hold.
@@ -92,7 +92,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   }
 
   public override get disabled(): boolean {
-    return this._readonly;
+    return this._disabled;
   }
 
   public override set disabled(disabled: boolean) {
@@ -108,7 +108,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
         (this._value as Form<any>).disabled = disabled;
       }
     }
-    this.disabled = disabled;
+    this._disabled = disabled;
     this.propagate(this.clone());
   }
 
