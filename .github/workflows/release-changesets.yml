@@ -16,6 +16,8 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
+          scope: '@identityofsine'
+          always-auth: true
           cache: npm
       - run: npm ci
       - uses: changesets/action@v1
@@ -24,6 +26,8 @@ jobs:
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Provide both variables; setup-node writes .npmrc expecting NODE_AUTH_TOKEN
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
 
