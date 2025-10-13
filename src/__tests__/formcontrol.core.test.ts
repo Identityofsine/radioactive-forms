@@ -1,5 +1,5 @@
-import { assert, describe, it } from "vitest";
-import { Validators } from "../form";
+import { assert, describe, it, test } from "vitest";
+import { Form, Validators } from "../form";
 import { formGroup } from "../form/functional";
 
 const BASE_SCHEMA = {
@@ -16,6 +16,7 @@ const BaseForm = formGroup<any>({
   field5: ["a", Validators.required],
 });
 
+
 describe("FormControl - core behavior", () => {
   it("should create a form group with various controls", () => {
     const form = BaseForm;
@@ -23,6 +24,23 @@ describe("FormControl - core behavior", () => {
       assert.ok(form.controls[key], `Control for key '${key}' should exist`);
     });
   });
+  it("should change state correctly on setter updates", () => {
+    const form = BaseForm;
+    const controls = form.controls;
+    const testControl = controls.field1;
+    assert.ok(testControl, "(critical) Control 'field1' should exist");
+    // Initial state
+    assert.equal(testControl.disabled, false, "control shouldn't be disabled initally");
+    assert.equal(testControl.readonly, false, "control shouldn't be readonly initally");
+
+    testControl.disabled = true;
+    assert.equal(testControl.disabled, true, "control should be disabled after setting disabled=true");
+
+    testControl.readonly = true;
+    assert.equal(testControl.readonly, true, "control should be readonly after setting readonly=true");
+
+  });
+
   it("should validate required fields correctly (string)", () => {
     const form = BaseForm;
     // string behavior
