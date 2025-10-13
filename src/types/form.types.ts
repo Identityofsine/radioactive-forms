@@ -17,13 +17,18 @@ export interface Cloneable {
   clone(): this;
 }
 
-type TupleControlForNonArray<T> = T extends any[]
-  ? never
+type TupleControlForNonArray<T> = [T] extends [readonly any[]]
+  ? // Allow tuple config for array values as well: [initialArray, validators?]
+    | [T | undefined | null]
+    | [T | undefined | null, ValidatorFn<any> | ValidatorFn<any>[]]
   :
+      // Allow [value] or [value, validators], where validators can target any
+      // supertype of T, so unions like string | number are accepted.
       | [T | undefined | null]
-      | [T | undefined | null, ValidatorFn<T> | ValidatorFn<T>[] | T]
-      | [T | undefined | null][];
+      | [T | undefined | null, ValidatorFn<any> | ValidatorFn<any>[]];
 
+// Accept either the direct value or a tuple initializer for it. For unions like string | number,
+// both tuple branches should be accepted via distributive conditional on T.
 export type FormControlPrimitive<T> = T | TupleControlForNonArray<T>;
 
 export type FormControlNonArrayPrimitive<T> =
@@ -41,6 +46,23 @@ export type FormControlPrimitiveMap<T> = {
   [K in keyof T]: FormControlPrimitive<T[K]>;
 };
 
+// Extract the actual control value type from the initializer type
+type ExtractControlValue<T> =
+  // Tuple syntax: [value] | [value, validators]
+  T extends readonly [infer V]
+    ? V
+    : T extends readonly [infer V, any]
+      ? V
+      // Nested Form stays as Form<...>
+      : T extends Form<infer U>
+        ? Form<U>
+        // Widen tuple-like arrays of Forms to Array<Form<...>>
+        : T extends ReadonlyArray<infer I>
+          ? I extends Form<any>
+            ? Array<I>
+            : T
+        : T;
+
 export type FormControlMap<T> = {
-  [K in keyof T]: FormControl<T[K] extends Form<infer U> ? Form<U> : T[K], T>;
+  [K in keyof T]: FormControl<ExtractControlValue<T[K]>, T>;
 };
