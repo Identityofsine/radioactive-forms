@@ -12,6 +12,8 @@ describe("Types - compile-time assertions", () => {
       complexTypeWithValidator: ["complex" as string | number, [Validators.required]],
       age: [30, [Validators.required]],
       flags: { active: true },
+      flagsWithValidator: [{ active: true }, [Validators.required]],
+      flagsWithValidatorArray: [[{ active: true, inactive: false }, {active: false, inactive: true}], [Validators.required]],
       nickname: [
         "admini",
         [Validators.required]
@@ -41,6 +43,8 @@ describe("Types - compile-time assertions", () => {
     expectTypeOf(form.controls.complexType.value).toEqualTypeOf<string | number>();
     expectTypeOf(form.controls.complexTypeWithValidator.value).toEqualTypeOf<string | number>();
     expectTypeOf(form.controls.flags.value.active).toEqualTypeOf<boolean>();
+    expectTypeOf(form.controls.flagsWithValidator.value.active).toEqualTypeOf<boolean>();
+    expectTypeOf(form.controls.flagsWithValidatorArray.value).toEqualTypeOf<{ active: boolean; inactive: boolean }[]>();
     expectTypeOf(form.controls.nickname.value).toEqualTypeOf<string>();
     expectTypeOf(form.controls.list.value).toEqualTypeOf<string[]>();
     expectTypeOf(form.controls.formGroups.value).toEqualTypeOf<

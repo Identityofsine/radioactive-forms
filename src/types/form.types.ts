@@ -17,14 +17,18 @@ export interface Cloneable {
   clone(): this;
 }
 
-type TupleControlForNonArray<T> = T extends any[]
+type TupleControlForNonArray<T> = [T] extends [readonly any[]]
   ? // Allow tuple config for array values as well: [initialArray, validators?]
     | [T | undefined | null]
-    | [T | undefined | null, ValidatorFn<T> | ValidatorFn<T>[]]
+    | [T | undefined | null, ValidatorFn<any> | ValidatorFn<any>[]]
   :
+      // Allow [value] or [value, validators], where validators can target any
+      // supertype of T, so unions like string | number are accepted.
       | [T | undefined | null]
-      | [T | undefined | null, ValidatorFn<T> | ValidatorFn<T>[]];
+      | [T | undefined | null, ValidatorFn<any> | ValidatorFn<any>[]];
 
+// Accept either the direct value or a tuple initializer for it. For unions like string | number,
+// both tuple branches should be accepted via distributive conditional on T.
 export type FormControlPrimitive<T> = T | TupleControlForNonArray<T>;
 
 export type FormControlNonArrayPrimitive<T> =
