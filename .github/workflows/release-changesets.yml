@@ -20,9 +20,12 @@ jobs:
           always-auth: true
           cache: npm
       - run: npm ci
+      - name: Prepare publish script
+        run: |
+          chmod +x .github/scripts/publish-if-needed.mjs || true
       - uses: changesets/action@v1
         with:
-          publish: npm publish --provenance --access public
+          publish: node .github/scripts/publish-if-needed.mjs
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
