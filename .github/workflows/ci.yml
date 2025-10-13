@@ -1,0 +1,51 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test -- --run
+  forbid-major-in-changeset:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block major bumps via Changesets files
+        run: |
+          if [ -d .changeset ]; then
+            if grep -R --include="*.md" -n "\bmajor\b" .changeset >/dev/null 2>&1; then
+              echo "Major bump via Changesets is disallowed. Use manual v* tag release.";
+              exit 1;
+            fi
+          fi
+  forbid-major-in-version-pr:
+    if: github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, 'Version Packages')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure jq is available
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - run: git fetch origin ${{ github.base_ref }} --depth=1
+      - name: Fail if PR bumps major version
+        run: |
+          base=$(git show origin/${{ github.base_ref }}:package.json | jq -r .version)
+          head=$(jq -r .version package.json)
+          base_major=${base%%.*}
+          head_major=${head%%.*}
+          echo "Base=${base} (major ${base_major}), Head=${head} (major ${head_major})"
+          if [ "$head_major" -gt "$base_major" ]; then
+            echo "Major version bump detected in Version PR. Release majors via v* tag only.";
+            exit 1;
+          fi
+
+

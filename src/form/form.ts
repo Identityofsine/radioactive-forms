@@ -1,13 +1,8 @@
-import { } from "../util";
-import { RequiresHook } from "../state/requires-hook";
+import {} from "../util";
 import type {
-  Cloneable,
   FormControlMap,
-  FormControlNonArrayPrimitive,
   FormControlNonArrayPrimitiveMap,
-  FormControlPrimitive,
   FormControlPrimitiveMap,
-  TopLevelFormState,
 } from "../types/form.types";
 import { FormControl } from "./formcontrol";
 import { createFormControls } from "./util/form-control.util";
@@ -43,9 +38,35 @@ export class Form<T> extends BaseForm<T, Form<T>> {
   ) {
     super(setState);
     this.__primitiveControls = controls;
-    this._controls = createFormControls(controls, (updatedForm) => {
-      this.internalUpdate();
-      this._setState?.(updatedForm);
+    this._controls = createFormControls(controls, (updateAction) => {
+      if (typeof updateAction === "function") {
+        if (this._setState) {
+          this._setState((oldForm: any) => {
+            const nextForm = updateAction(oldForm);
+            if (nextForm && typeof nextForm.internalUpdate === "function") {
+              nextForm.internalUpdate();
+            }
+            return nextForm;
+          });
+        } else {
+          // Non-reactive path: evaluate updater against current instance and merge
+          const nextForm = updateAction(this as unknown as Form<T>);
+          Object.assign(this, nextForm);
+          this.internalUpdate();
+        }
+      } else {
+        if (this._setState) {
+          const nextForm = updateAction;
+          if (nextForm && typeof nextForm.internalUpdate === "function") {
+            nextForm.internalUpdate();
+          }
+          this._setState(nextForm);
+        } else {
+          // Non-reactive direct assignment path
+          Object.assign(this, updateAction);
+          this.internalUpdate();
+        }
+      }
     });
     this._flattenedControls = Object.values(this._controls ?? {}) || [];
     this._dirty = false;
@@ -80,9 +101,33 @@ export class Form<T> extends BaseForm<T, Form<T>> {
       );
       return;
     }
-    const newControls = createFormControls(controlMap, (updatedForm) => {
-      this.internalUpdate();
-      this.propagate(updatedForm);
+    const newControls = createFormControls(controlMap, (updateAction) => {
+      if (typeof updateAction === "function") {
+        if (this._setState) {
+          this._setState((oldForm: any) => {
+            const nextForm = updateAction(oldForm);
+            if (nextForm && typeof nextForm.internalUpdate === "function") {
+              nextForm.internalUpdate();
+            }
+            return nextForm;
+          });
+        } else {
+          const nextForm = updateAction(this as unknown as Form<T>);
+          Object.assign(this, nextForm);
+          this.internalUpdate();
+        }
+      } else {
+        if (this._setState) {
+          const nextForm = updateAction;
+          if (nextForm && typeof nextForm.internalUpdate === "function") {
+            nextForm.internalUpdate();
+          }
+          this._setState(updateAction);
+        } else {
+          Object.assign(this, updateAction);
+          this.internalUpdate();
+        }
+      }
     });
     this._controls = Object.assign(this._controls, newControls);
     this._flattenedControls = Object.values(this._controls ?? {}) || [];
@@ -99,6 +144,22 @@ export class Form<T> extends BaseForm<T, Form<T>> {
       `Form with controls:`,
       this._controls,
       `set to readonly: ${value}`,
+    );
+    // Use clone to ensure React detects the change
+    this.propagate(this.clone());
+  }
+
+  override get disabled(): boolean {
+    return this._disabled;
+  }
+
+  override set disabled(value: boolean) {
+    this._disabled = value;
+    this._flattenedControls.forEach((control) => (control.disabled = value));
+    console.dLog(
+      `Form with controls:`,
+      this._controls,
+      `set to disabled: ${value}`,
     );
     // Use clone to ensure React detects the change
     this.propagate(this.clone());
@@ -157,6 +218,8 @@ export class Form<T> extends BaseForm<T, Form<T>> {
           result[key] = value.map((v) =>
             (v as unknown as Form<any>).build(),
           ) as any;
+        } else {
+          result[key] = value as any;
         }
       } else {
         result[key] = value as any;
@@ -182,7 +245,7 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     this._valid = invalidControls?.length === 0;
     this._invalids = invalidControls;
 
-    // Use clone to ensure React detects the change
-    this.propagate(this);
+    // Do not propagate here; callers are responsible for state updates to
+    // avoid conflicting React state transitions and preserve update ordering.
   }
 }

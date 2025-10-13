@@ -1,12 +1,18 @@
 {
   "name": "@identityofsine/radioactive-forms",
-  "version": "0.1.3",
+  "version": "1.0.0",
   "description": "Powerful forms for React",
   "main": "src/index.ts",
   "scripts": {
     "dev": "concurrently \"npm run dev:example\" \"npm run dev:library\"",
     "example:dev": "cd example/basic-react-forms/ && npm run dev",
-    "example:install": "cd example/basic-react-forms/ && npm install"
+    "example:install": "cd example/basic-react-forms/ && npm install",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "typecheck": "tsc -p tsconfig.type-tests.json --noEmit",
+    "typecheck:watch": "tsc -p tsconfig.type-tests.json --watch --noEmit"
   },
   "repository": {
     "type": "git",
@@ -24,9 +30,16 @@
   },
   "homepage": "https://github.com/Identityofsine/radioactive-forms#readme",
   "devDependencies": {
+    "@changesets/cli": "^2.27.8",
     "@types/react": "^19.1.13",
     "concurrently": "^9.2.1",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^2.1.9",
+    "@vitest/coverage-v8": "^2.1.9",
+    "jsdom": "^25.0.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/user-event": "^14.6.1"
   },
   "dependencies": {
     "react": "^19.1.1"

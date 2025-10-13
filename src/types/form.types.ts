@@ -17,15 +17,20 @@ export interface Cloneable {
   clone(): this;
 }
 
-export type FormControlPrimitive<T> =
-  | [T | undefined | null]
-  | [T | undefined | null, ValidatorFn<T>[]];
+type TupleControlForNonArray<T> = T extends any[]
+  ? never
+  :
+      | [T | undefined | null]
+      | [T | undefined | null, ValidatorFn<T> | ValidatorFn<T>[] | T]
+      | [T | undefined | null][];
+
+export type FormControlPrimitive<T> = T | TupleControlForNonArray<T>;
 
 export type FormControlNonArrayPrimitive<T> =
   | T
   | undefined
   | null
-  | Form<T>
+  | Form<FormControlPrimitive<T>>
   | FormControlPrimitive<T>;
 
 export type FormControlNonArrayPrimitiveMap<T> = {

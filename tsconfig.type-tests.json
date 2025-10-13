@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strictNullChecks": true,
+    "noEmit": true,
+    "checkJs": false,
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/type-tests/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/__tests__/**",
+    "example/**"
+  ]
+}

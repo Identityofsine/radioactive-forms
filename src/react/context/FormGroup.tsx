@@ -9,12 +9,18 @@ export const FormGroupContext = React.createContext<
   FormGroupContextInterface<any> | undefined
 >(undefined);
 
+type FormGroupProviderProps<T> = React.PropsWithChildren<
+  FormGroupContextInterface<T> & { value?: Form<T> }
+>;
+
 export const FormGroupProvider = <T,>({
   form,
+  value,
   children,
-}: React.PropsWithChildren<FormGroupContextInterface<T>>) => {
+}: FormGroupProviderProps<T>) => {
+  const provided = form ?? value;
   return (
-    <FormGroupContext.Provider value={{ form }}>
+    <FormGroupContext.Provider value={{ form: provided }}>
       {children}
     </FormGroupContext.Provider>
   );
