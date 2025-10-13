@@ -1,38 +1,112 @@
 # Radioactive Forms
-```diff
-- WIP!!
-```
+
+Type-safe, reactive forms for React.
 
 ## Overview
 
-> damn
+- Typed controls with validators
+- Nested forms and arrays of forms/controls
+- Reactive updates via a lightweight hook
+- Readonly/disabled modes and dirty/touched tracking
+- Build fully typed output objects with `form.build()`
 
-## Development 
-
-First, clone this repository:
+## Installation
 
 ```bash
-git clone https://github.com/IdentityofSine/radioactive-forms
+npm i @identityofsine/radioactive-forms
 ```
 
-Then, install dependencies:
+## Quickstart
 
-```bash
-npm install
+```tsx
+import { useForm, Validators, Form } from '@identityofsine/radioactive-forms';
+
+type Profile = { name: string; email: string; age: number; agree: boolean };
+
+export function Example() {
+  const { form } = useForm<Profile>({
+    name: ['', [Validators.required]],
+    email: ['', [Validators.required]],
+    age: [18, []],
+    agree: [false, []],
+  });
+  const controls = (form as unknown as { controls: Record<string, any> })?.controls;
+  return (
+    <>
+      <input value={String(controls?.name.value ?? '')} onChange={e => controls?.name && (controls.name.value = e.target.value)} />
+      <button disabled={!form?.valid || form?.readonly} onClick={() => console.log(Form.isForm(form) ? form.build() : undefined)}>Submit</button>
+    </>
+  );
+}
 ```
 
-The examples (being the development environment) are in the `examples/` folder. We leverage these examples to develop with hot-reloading, so you can run the examples and see your changes live.
-To run the (only) example:
+## Core Concepts
+
+- Form template: `{ field: [initialValue, [validators...]] }`
+- `Form` state: `valid`, `dirty`, `touched`, `readonly`, `disabled`
+- `Form` methods: `reset()`, `patchValue(partial)`, `build()`; static `Form.isForm(obj)`
+- `FormControl<T, O>`: `.value` setter triggers validation, `.reset()`, `.patchValue()`
+- Validators: `Validators.required`
+- Nesting: controls can hold nested `Form` or arrays of `Form`/`FormControl`
+
+## API Surface
+
+- `useForm<T>(template, options?, deps?) => { form?: Form<T> }`
+- `Form<T>`: `.controls`, `.invalids`, `.getControl(key)`, `.addControls(map)`, `.readonly`, `.disabled`, `.reset()`, `.patchValue()`, `.build()`
+- `FormControl<T, O>`: `.value`, `.readonly`, `.disabled`, `.reset()`, `.patchValue()`
+- `Validators`: `required`
+- React context: `FormGroup` for providing `form` via context
+- React hook: `useFormGroup<T>(options?) => { form?: Form<T> }`
+
+### useFormGroup Example
+
+```tsx
+import { FormGroupProvider, useFormGroup, useForm } from '@identityofsine/radioactive-forms';
+
+type Profile = { name: string; email: string };
+
+function Child() {
+  const { form } = useFormGroup<Profile>({ required: true });
+  const controls = (form as any)?.controls;
+  return (
+    <input value={String(controls?.name.value ?? '')} onChange={e => controls?.name && (controls.name.value = e.target.value)} />
+  );
+}
+
+export function Parent() {
+  const { form } = useForm<Profile>({ name: ['', []], email: ['', []] });
+  return (
+    <FormGroupProvider form={form}>
+      <Child />
+    </FormGroupProvider>
+  );
+}
+```
+
+## Examples / Local Development
+
+The example app (development environment) lives in `example/basic-react-forms` and hot-reloads against local sources.
 
 ```bash
-
 npm run example:install
 npm run example:dev
 ```
 
-This should then run `vite` in the `examples/basic-react-forms` folder, which has a `path` set to the `~/src/index.ts` file, so you can develop the library while seeing your changes live in the example. 
+This runs Vite in `example/basic-react-forms`, which is configured to use the local `src/index.ts` so you can develop the library and see changes live.
 
+## Testing & Type-Checking
 
-## Building
+```bash
+npm run test
+npm run test:watch
+npm run test:coverage
+npm run typecheck
+```
 
-i don't know yet
+## Contributing
+
+PRs welcome! Use the example app for local development and run tests and type checks before submitting.
+
+## License
+
+MIT
