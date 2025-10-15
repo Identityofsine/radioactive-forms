@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run dev:example\" \"npm run dev:library\"",
     "example:dev": "cd example/basic-react-forms/ && npm run dev",
     "example:install": "cd example/basic-react-forms/ && npm install",
-    "test": "vitest",
+    "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
