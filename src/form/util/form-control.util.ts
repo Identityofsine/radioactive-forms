@@ -15,7 +15,7 @@ export function createFormControls<T>(
     | FormControlPrimitiveMap<T>
     | FormControlMap<T>
     | FormControlNonArrayPrimitiveMap<T>,
-  setState: React.Dispatch<React.SetStateAction<any>>,
+  setState: React.Dispatch<React.SetStateAction<any>>
 ): FormControlMap<T> {
   if (typeof form !== "object" || form === null) {
     throw new Error("Form must be a non-null object");
@@ -35,24 +35,34 @@ export function createFormControls<T>(
     ) {
       const [initialValue, validatorsMaybe] = control as [
         any,
-        Array<ValidatorFn<T>> | ValidatorFn<T> | undefined,
+        Array<ValidatorFn<T>> | ValidatorFn<T> | undefined
       ];
       const validators: Array<ValidatorFn<T>> =
         typeof validatorsMaybe === "function"
           ? [validatorsMaybe]
-          : (validatorsMaybe ?? []);
+          : validatorsMaybe ?? [];
       console.dLog?.(
         `Creating FormControl for key: ${String(key)} with initialValue:`,
         initialValue,
         "and validators:",
-        validators,
+        validators
       );
       controls[key] = createFormControl(
         key,
         initialValue,
         validators,
-        setState,
+        setState
       );
+      if (
+        Array.isArray(initialValue) &&
+        initialValue.length > 0 &&
+        initialValue[0] instanceof Form
+      ) {
+        assignHooklessFormArray(
+          initialValue,
+          () => controls[key] as FormControl<any, any>
+        );
+      }
     } else if (
       Array.isArray(control) &&
       control.length >= 1 &&
@@ -63,7 +73,7 @@ export function createFormControls<T>(
       controls[key] = createFormControl<T>(key, control as any, [], setState);
       assignHooklessFormArray(
         formsArray,
-        () => controls[key] as FormControl<any, any>,
+        () => controls[key] as FormControl<any, any>
       );
     } else if (Array.isArray(control)) {
       // assuming that this is just an array of objectsl go on as normal
@@ -79,7 +89,7 @@ export function createFormControls<T>(
           key,
           () => new Form(primitiveControls),
           [],
-          setState,
+          setState
         );
         (controls[key] as FormControl<any, any>).value = new Form(
           primitiveControls,
@@ -91,7 +101,7 @@ export function createFormControls<T>(
                 ? oldState(oldFormCached)
                 : oldState;
             (controls[key] as FormControl<any, any>).value = value;
-          },
+          }
         );
       } else {
         controls[key] = control as any as FormControl<any, T>;
@@ -110,7 +120,7 @@ export function createFormControl<T>(
     | FormControlNonArrayPrimitive<T>
     | ((setState?: React.Dispatch<React.SetStateAction<any>>) => void),
   validators?: Array<ValidatorFn<T>>,
-  setState?: React.Dispatch<React.SetStateAction<any>>,
+  setState?: React.Dispatch<React.SetStateAction<any>>
 ): FormControl<any, T> {
   let initialVal: any = initialValue;
   return new FormControl(
@@ -120,7 +130,8 @@ export function createFormControl<T>(
     (control) => {
       if (setState) {
         setState((oldForm: any) => {
-          const controls = Object.assign(oldForm._controls ?? {}, {
+          if (!oldForm) return;
+          const controls = Object.assign(oldForm?._controls ?? {}, {
             [key]: control,
           });
           const obj = Object.assign(
@@ -129,18 +140,18 @@ export function createFormControl<T>(
             {
               _controls: controls,
               _flattenedControls: Object.values(controls),
-            },
+            }
           );
           return obj;
         });
       }
-    },
+    }
   ) as FormControl<any, T>;
 }
 
 export function assignHooklessFormArray<T>(
   arr: Array<Form<T>>,
-  controlFactory: () => FormControl<Form<T>[], any>,
+  controlFactory: () => FormControl<Form<T>[], any>
 ): void {
   const control = controlFactory();
   control.patchValue(
@@ -162,7 +173,7 @@ export function assignHooklessFormArray<T>(
       if (BaseForm.needsHook(formInstance)) {
         const newForm = new Form<any>(
           (formInstance as any).__primitiveControls,
-          setState,
+          setState
         );
         return newForm;
       } else {
@@ -172,7 +183,7 @@ export function assignHooklessFormArray<T>(
     }),
     {
       stateless: true,
-    },
+    }
   );
 }
 

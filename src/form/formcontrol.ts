@@ -81,7 +81,9 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     if (this._contains_a_form) {
       if (Array.isArray(this._value)) {
         this._value.forEach((item) => {
-          item.readonly = isReadonly;
+          if (Form.isForm(item)) {
+            item.readonly = isReadonly;
+          }
         });
       } else {
         (this._value as Form<any>).readonly = isReadonly;
@@ -102,7 +104,9 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     if (this._contains_a_form) {
       if (Array.isArray(this._value)) {
         this._value.forEach((item) => {
-          item.disabled = disabled;
+          if (Form.isForm(item)) {
+            item.disabled = disabled;
+          }
         });
       } else {
         (this._value as Form<any>).disabled = disabled;
@@ -129,7 +133,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
       this.value = newValue as T; // For non-object types, just set the value directly
     }
     if (!opts.stateless) {
-      this.propagate(this);
+      this.propagate(this.clone());
     }
   }
 
