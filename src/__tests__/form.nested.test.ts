@@ -1,5 +1,6 @@
 import { assert, describe, it } from "vitest";
 import { formGroup } from "../form/functional";
+import { Form } from "../form";
 
 // Boilerplate test cases for nested forms and arrays
 describe("Form - nested forms and arrays", () => {
@@ -10,11 +11,15 @@ describe("Form - nested forms and arrays", () => {
         name: "Alice",
         age: 28,
       }),
-      admin: formGroup({
+      admin: formGroup<{
+        name: string;
+        age: number;
+        permissions: string[];
+      }>({
         name: "Bob",
         age: 35,
-        permissions: ["read", "write"],
-      }),
+        permissions: ["read", "write"] as string[],
+      })
     });
 
     assert.equal(
@@ -94,8 +99,9 @@ describe("Form - nested forms and arrays", () => {
     ];
 
     // form
-    const form = formGroup({
-      users: obj.map((u) => formGroup(u)),
+    const form = formGroup<{ users: Form<{ name: string; age: number }>[]; admins: Form<{ name: string; age: number }>[] }>({
+      users: obj.map((u) => formGroup(u)) as Form<{ name: string; age: number }>[],
+      admins: [obj.map((u) => formGroup(u)) as Form<{ name: string; age: number }>[], []],
     });
 
     assert.equal(form.controls.users.value.length, 3, "Should have 3 users");
@@ -123,5 +129,45 @@ describe("Form - nested forms and arrays", () => {
     );
 
     assert.equal(form.controls.users.value.length, 4, "Should have 4 users");
+
+    // Test admins array
+    assert.equal(form.controls.admins.value.length, 3, "Should have 3 admins");
+
+    // Update a value in the first admin
+    form.controls.admins.value[0].controls.age.value = 36;
+    assert.equal(
+      form.controls.admins.value[0].controls.age.value,
+      36,
+      "First admin's age should be updated to 36",
+    );
+
+    // Verify parent form is still dirty
+    assert.equal(
+      form.dirty,
+      true,
+      "Parent form should remain dirty after admin update",
+    );
+
+    // Add a new admin form
+    form.controls.admins.value.push(
+      formGroup({
+        name: "Admin4",
+        age: 45,
+      }),
+    );
+
+    assert.equal(form.controls.admins.value.length, 4, "Should have 4 admins");
+
+    // Verify we can access the new admin's data
+    assert.equal(
+      form.controls.admins.value[3].controls.name.value,
+      "Admin4",
+      "New admin's name should be Admin4",
+    );
+    assert.equal(
+      form.controls.admins.value[3].controls.age.value,
+      45,
+      "New admin's age should be 45",
+    );
   });
 });
