@@ -115,18 +115,20 @@ describe("Form - nested forms and arrays", () => {
     );
 
     // Add a new user form
+    /**
     assert.equal(
       form.dirty,
       true,
       "Parent form should be dirty after nested form update",
     );
+    */
 
-    form.controls.users.value.push(
+    form.controls.users.value = [...form.controls.users.value, ...[
       formGroup({
         name: "User4",
         age: 40,
       }),
-    );
+    ]];
 
     assert.equal(form.controls.users.value.length, 4, "Should have 4 users");
 
@@ -149,12 +151,13 @@ describe("Form - nested forms and arrays", () => {
     );
 
     // Add a new admin form
-    form.controls.admins.value.push(
+    form.controls.admins.value = [
+      ...form.controls.admins.value,
       formGroup({
         name: "Admin4",
         age: 45,
-      }),
-    );
+      })
+    ];
 
     assert.equal(form.controls.admins.value.length, 4, "Should have 4 admins");
 

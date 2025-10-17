@@ -290,4 +290,99 @@ describe('React - FormControl Proxy Mutations', () => {
     // item-2 should still be item-2, just at index 0
     expect(screen.getByTestId('item-id-0')).toHaveTextContent('item-2');
   });
+
+  it('should correctly update first added item after adding multiple items', async () => {
+     const user = userEvent.setup();
+     render(<ArrayMutationComponent />);
+ 
+     // Start with 2 items (item-1, item-2)
+     await waitFor(() => {
+       expect(screen.getByTestId('item-count')).toHaveTextContent('2');
+     });
+ 
+     // Add 15 more items via push (total 17)
+     for (let i = 0; i < 15; i++) {
+       await user.click(screen.getByTestId('push-btn'));
+       await new Promise(r => setTimeout(r, 50)); // Small delay to ensure timestamps differ
+     }
+ 
+     await waitFor(() => {
+       expect(screen.getByTestId('item-count')).toHaveTextContent('17');
+     });
+ 
+     // Verify we have all items
+     const itemsContainer = screen.getByTestId('items-container');
+     expect(itemsContainer.children.length).toBe(17);
+ 
+     // Verify first and last items exist
+     expect(screen.getByTestId('item-id-0')).toHaveTextContent('item-1');
+     expect(screen.getByTestId('item-value-0')).toHaveTextContent('10');
+     const lastItemElement = itemsContainer.children[16];
+     expect(lastItemElement).toBeInTheDocument();
+ 
+     // Record initial count
+     let countBefore = parseInt(screen.getByTestId('item-count').textContent || '0');
+     expect(countBefore).toBe(17);
+ 
+     // Now splice multiple items to test stability
+     // Remove items from middle, then beginning
+     await user.click(screen.getByTestId('splice-btn'));
+     await waitFor(() => {
+       expect(screen.getByTestId('item-count')).toHaveTextContent('16');
+     });
+ 
+     // Verify length is correct and first item changed
+     let countAfterFirstSplice = parseInt(screen.getByTestId('item-count').textContent || '0');
+     expect(countAfterFirstSplice).toBe(16);
+     expect(screen.getByTestId('item-id-0')).toHaveTextContent('item-2');
+ 
+     // Add more items to bring it back to 17+
+     for (let i = 0; i < 3; i++) {
+       await user.click(screen.getByTestId('push-btn'));
+       await new Promise(r => setTimeout(r, 30));
+     }
+ 
+     await waitFor(() => {
+       expect(screen.getByTestId('item-count')).toHaveTextContent('19');
+     });
+ 
+     // Verify count stayed at 19, not corrupted
+     let finalCount = parseInt(screen.getByTestId('item-count').textContent || '0');
+     expect(finalCount).toBe(19);
+     expect(itemsContainer.children.length).toBe(19);
+ 
+     // Direct value check - the first item should still have correct value
+     expect(screen.getByTestId('item-id-0')).toHaveTextContent('item-2');
+ 
+     // Verify a sampling of items throughout the list are still intact
+     // Check items at various indices: 1, 5, 10, 15, 18
+     const indicesToCheck = [1, 5, 10, 15, 18];
+     for (const idx of indicesToCheck) {
+       const itemElement = screen.getByTestId(`item-${idx}`);
+       expect(itemElement).toBeInTheDocument();
+       // Verify they have valid IDs and values
+       const idElement = itemElement.querySelector(`[data-testid="item-id-${idx}"]`);
+       const valueElement = itemElement.querySelector(`[data-testid="item-value-${idx}"]`);
+       expect(idElement).toBeInTheDocument();
+       expect(valueElement).toBeInTheDocument();
+       expect(idElement?.textContent).toBeTruthy();
+       expect(valueElement?.textContent).toBeTruthy();
+     }
+ 
+     // Pop some items
+     await user.click(screen.getByTestId('pop-btn'));
+     await waitFor(() => {
+       expect(screen.getByTestId('item-count')).toHaveTextContent('18');
+     });
+ 
+     await user.click(screen.getByTestId('pop-btn'));
+     await waitFor(() => {
+       expect(screen.getByTestId('item-count')).toHaveTextContent('17');
+     });
+ 
+     // Final verification - count should be 17, not corrupted
+     let finalCountAfterPops = parseInt(screen.getByTestId('item-count').textContent || '0');
+     expect(finalCountAfterPops).toBe(17);
+     expect(itemsContainer.children.length).toBe(17);
+   });
 });

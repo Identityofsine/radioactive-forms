@@ -165,3 +165,52 @@ describe("Form - validation behavior", () => {
     );
   });
 });
+
+describe("Form - Core Functionality", () => {
+  it("should generate unique form IDs for each form instance", () => {
+    const form1 = formGroup({ name: "test1", age: 20 });
+    const form2 = formGroup({ name: "test2", age: 25 });
+    const form3 = formGroup({ name: "test3", age: 30 });
+
+    assert.isString(form1.formId, "formId should be a string");
+    assert.isString(form2.formId, "formId should be a string");
+    assert.isString(form3.formId, "formId should be a string");
+
+    assert.notEqual(form1.formId, form2.formId, "Form IDs should be unique");
+    assert.notEqual(form2.formId, form3.formId, "Form IDs should be unique");
+    assert.notEqual(form1.formId, form3.formId, "Form IDs should be unique");
+  });
+
+  it("should have readonly formId property", () => {
+    const form = formGroup({ name: "test", age: 20 });
+
+    const originalId = form.formId;
+
+    // Attempting to assign to formId should not work (readonly)
+    try {
+      (form as any).formId = "modified-id";
+    } catch (e) {
+      // Expected in strict mode
+    }
+
+    // ID should remain unchanged
+    assert.equal(form.formId, originalId, "formId should be readonly");
+  });
+
+  it("should maintain formId consistency across form operations", () => {
+    const form = formGroup({ name: "test", age: 20 });
+    const originalId = form.formId;
+
+    // Modify values
+    form.controls.name.value = "modified";
+    assert.equal(form.formId, originalId, "formId should stay same after value change");
+
+    // Reset
+    form.reset();
+    assert.equal(form.formId, originalId, "formId should stay same after reset");
+
+    // Patch
+    form.patchValue({ age: 25 });
+    assert.equal(form.formId, originalId, "formId should stay same after patchValue");
+  });
+});
