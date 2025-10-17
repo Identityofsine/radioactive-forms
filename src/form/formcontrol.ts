@@ -3,7 +3,7 @@ import { ValidatorFn } from "../types/validator.types";
 import { BaseForm } from "./base-form";
 import { Form } from "./form";
 import { assignHooklessFormArray } from "./util/form-control.util";
-import { } from "../util";
+import {} from "../util";
 
 /**
  * @param T - The type of the value that the FormControl will hold.
@@ -21,7 +21,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     key: keyof T,
     initialValue: T,
     validators: Array<ValidatorFn<T>> = [],
-    setState: React.Dispatch<React.SetStateAction<Form<O>>>,
+    setState: React.Dispatch<React.SetStateAction<Form<O>>>
   ) {
     super(setState);
     this._key = key;
@@ -120,7 +120,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     newValue: Partial<T>,
     opts: PatchValueProps = {
       stateless: false,
-    },
+    }
   ): void {
     if (
       typeof this._value === "object" &&
@@ -148,9 +148,10 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   }
 
   private handleNewArrayObject(): void {
-    if (!Array.isArray(this._value) || (
-      !this._contains_a_form && !this._value.some((item) => Form.isForm(item))
-    )) {
+    if (
+      !Array.isArray(this._value) ||
+      (!this._contains_a_form && !this._value.some((item) => Form.isForm(item)))
+    ) {
       return;
     }
 
@@ -167,10 +168,20 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
           return true;
         }
         // Handle other properties like 'length'
+        if (property === 'length') {
+          if (target.length !== (newValue as number)) {
+            (target as any)[property] = newValue;
+            this.internalUpdate(this._value);
+            this.propagate(this.clone());
+            return true;
+          }
+          (target as any)[property] = newValue;
+          return true;
+        }
         (target as any)[property] = newValue;
         return true;
       },
-    })
+    });
   }
 
   private handleNewFormObject(): void {
@@ -182,14 +193,13 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     // Array of forms: only rehook if any child needs a hook
     if (Array.isArray(currentValue)) {
       const arr = (currentValue as Array<unknown>).filter(
-        (item): item is Form<any> => Form.isForm(item),
+        (item): item is Form<any> => Form.isForm(item)
       );
       const needsAnyHook = arr.some((f) => BaseForm.needsHook(f));
       if (needsAnyHook) {
-        assignHooklessFormArray.bind(this)(
-          arr,
-          () => this as unknown as FormControl<Form<any>[], any>,
-        );
+        assignHooklessFormArray(arr, {
+          current: this as any,
+        });
       }
       return;
     }
@@ -204,8 +214,6 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
       }) as unknown as T;
     }
   }
-
-
 
   public static isFormControl(obj: any): obj is FormControl<any, any> {
     return obj && obj.__form_control === true;

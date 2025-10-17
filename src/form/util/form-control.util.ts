@@ -60,7 +60,7 @@ export function createFormControls<T>(
       ) {
         assignHooklessFormArray(
           initialValue,
-          () => controls[key] as FormControl<any, any>
+          { current: controls[key] as FormControl<any, any> }
         );
       }
     } else if (
@@ -73,7 +73,7 @@ export function createFormControls<T>(
       controls[key] = createFormControl<T>(key, control as any, [], setState);
       assignHooklessFormArray(
         formsArray,
-        () => controls[key] as FormControl<any, any>
+        { current: controls[key] as FormControl<any, any> }
       );
     } else if (Array.isArray(control)) {
       // assuming that this is just an array of objectsl go on as normal
@@ -149,15 +149,34 @@ export function createFormControl<T>(
   ) as FormControl<any, T>;
 }
 
+export type Ref<T> = { current: T };
+
+// Accept either a ref-like object or a factory function returning the control
+export type RefOrFactory<T> = { current: T } | (() => T);
+
+function resolveRefOrFactory<T>(refOrFactory: RefOrFactory<T>): T | undefined {
+  if (typeof refOrFactory === "function") {
+    try {
+      return (refOrFactory as () => T)();
+    } catch {
+      return undefined;
+    }
+  }
+  return (refOrFactory as { current: T })?.current;
+}
+
 export function assignHooklessFormArray<T>(
   arr: Array<Form<T>>,
-  controlFactory: () => FormControl<Form<T>[], any>
+  controlFactory: RefOrFactory<FormControl<Form<T>[], any>>
 ): void {
-  const control = controlFactory();
+  const control = resolveRefOrFactory(controlFactory);
+  if (!control) {
+    return;
+  }
   control.patchValue(
     (arr as Array<Form<any>>).map((formInstance, index) => {
       const setState = (oldState: any) => {
-        const control = controlFactory();
+        const control = resolveRefOrFactory(controlFactory);
         const oldFormCached = () => (control.value as Array<Form<T>>)[index];
         const value: Form<T> =
           typeof oldState === "function" ? oldState(oldFormCached()) : oldState;
