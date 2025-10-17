@@ -11,6 +11,8 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
   private readonly __base_form = true;
   private readonly __initialized = true;
   private readonly __needs_hook: boolean;
+  private static _idCounter = 0;
+  private readonly _formId: string;
 
   protected _dirty: boolean = false;
   protected _touched: boolean = false;
@@ -21,6 +23,7 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
   public constructor(setState?: React.Dispatch<React.SetStateAction<Z>>) {
     super(setState);
     this.__needs_hook = !setState;
+    this._formId = `form-${++BaseForm._idCounter}`;
   }
 
   public static isFormLike(obj: any): obj is BaseForm<any> {
@@ -29,6 +32,10 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
 
   public static needsHook(obj: any): boolean {
     return obj && obj.__needs_hook === true;
+  }
+
+  public get formId(): string {
+    return this._formId;
   }
 
   get dirty(): boolean {
