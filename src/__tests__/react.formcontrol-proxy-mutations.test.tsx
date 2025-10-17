@@ -6,6 +6,7 @@ import { Form } from '../form';
 import { FormGroupContext, FormGroupProvider } from '../react/context/FormGroup';
 import { BaseFormComponent } from '../test/react-test-utils';
 import { formGroup } from '../form/functional';
+import { useForm } from '../react';
 
 interface TestItem {
   id: string;
@@ -439,5 +440,79 @@ describe('React - FormControl Proxy Mutations', () => {
     await waitFor(() => {
       expect(screen.getByTestId('item-count')).toHaveTextContent('3');
     });
+  });
+
+  // New regression: make 4, mutate, make 2 more, mutate; final count stays 6
+  interface RootSchema {
+    items: Form<TestItem>[];
+  }
+
+  const SequenceComponent: React.FC = () => {
+    const { form } = useForm<RootSchema>({
+      items: [
+        formGroup<TestItem>({ id: 'item-1', value: 10 }),
+        formGroup<TestItem>({ id: 'item-2', value: 20 }),
+      ],
+    });
+
+    const items = form?.controls?.items?.value as Form<TestItem>[] | undefined;
+
+    const pushOne = () => {
+      if (!items) return;
+      const newItem = formGroup<TestItem>({
+        id: `item-${Date.now()}`,
+        value: Math.floor(Math.random() * 100),
+      });
+      // In-place mutation via proxied array
+      items[items.length] = newItem;
+    };
+
+    const incFirst = () => {
+      if (!items || items.length === 0) return;
+      const f = items[0];
+      f.controls.value.value = (f.getControl('value')?.value ?? 0) + 1;
+    };
+
+    return (
+      <div>
+        <button data-testid="push-one" onClick={pushOne}>push-one</button>
+        <button data-testid="inc-first-seq" onClick={incFirst}>inc-first-seq</button>
+        <div data-testid="seq-count">{items?.length ?? 0}</div>
+        <div data-testid="seq-container">
+          {items?.map((form, idx) => (
+            <FormGroupProvider key={String(form.getControl('id')?.value)} form={form}>
+              <ItemComponent index={idx} />
+            </FormGroupProvider>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  it('sequence: make 4, mutate, make 2 more, mutate; final count 6', async () => {
+    const user = userEvent.setup();
+    render(<SequenceComponent />);
+
+    // Start at 2; push twice => 4
+    await waitFor(() => expect(screen.getByTestId('seq-count')).toHaveTextContent('2'));
+    await user.click(screen.getByTestId('push-one'));
+    await user.click(screen.getByTestId('push-one'));
+    await waitFor(() => expect(screen.getByTestId('seq-count')).toHaveTextContent('4'));
+
+    // Mutate first
+    await user.click(screen.getByTestId('inc-first-seq'));
+
+    // Push two more => 6
+    await user.click(screen.getByTestId('push-one'));
+    await user.click(screen.getByTestId('push-one'));
+    await waitFor(() => expect(screen.getByTestId('seq-count')).toHaveTextContent('6'));
+
+    // Mutate first again
+    await user.click(screen.getByTestId('inc-first-seq'));
+
+    // Final assertion: still 6 items visible
+    await waitFor(() => expect(screen.getByTestId('seq-count')).toHaveTextContent('6'));
+    const items = screen.getByTestId('seq-container').children;
+    expect(items.length).toBe(6);
   });
 });
