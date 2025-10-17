@@ -2,8 +2,17 @@ import { PatchValueProps } from "../types/control.types";
 import { ValidatorFn } from "../types/validator.types";
 import { BaseForm } from "./base-form";
 import { Form } from "./form";
-import { assignHooklessFormArray } from "./util/form-control.util";
+import {
+  assignHooklessFormArray,
+  Ref,
+  RefOrFactory,
+} from "./util/form-control.util";
 import {} from "../util";
+
+type FormControlVersion<T, O> = {
+  current: FormControl<T, O>;
+  old: FormControl<T, O>;
+};
 
 /**
  * @param T - The type of the value that the FormControl will hold.
@@ -16,6 +25,12 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   private _initialValue: T;
   private _value: T;
   private _validators: Array<ValidatorFn<T>>;
+  private _versionRef: Ref<FormControlVersion<T, O>> = {
+    current: {
+      current: this,
+      old: undefined,
+    },
+  };
 
   constructor(
     key: keyof T,
@@ -168,7 +183,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
           return true;
         }
         // Handle other properties like 'length'
-        if (property === 'length') {
+        if (property === "length") {
           if (target.length !== (newValue as number)) {
             (target as any)[property] = newValue;
             this.internalUpdate(this._value);
@@ -197,9 +212,10 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
       );
       const needsAnyHook = arr.some((f) => BaseForm.needsHook(f));
       if (needsAnyHook) {
-        assignHooklessFormArray(arr, {
-          current: this as any,
-        });
+        assignHooklessFormArray(
+          arr,
+          this._versionRef?.current as RefOrFactory<FormControl<any, O>>
+        );
       }
       return;
     }
@@ -213,6 +229,17 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
         this.value = val as unknown as T;
       }) as unknown as T;
     }
+  }
+
+  public override clone() {
+    const superClone = super.clone();
+    this._versionRef.current = {
+      current: superClone,
+      old: this._versionRef.current.current,
+    };
+    (superClone as FormControl<T, O>)._versionRef = this._versionRef;
+
+    return superClone;
   }
 
   public static isFormControl(obj: any): obj is FormControl<any, any> {

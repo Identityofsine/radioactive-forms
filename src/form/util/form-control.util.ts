@@ -58,10 +58,9 @@ export function createFormControls<T>(
         initialValue.length > 0 &&
         initialValue[0] instanceof Form
       ) {
-        assignHooklessFormArray(
-          initialValue,
-          { current: controls[key] as FormControl<any, any> }
-        );
+        assignHooklessFormArray(initialValue, {
+          current: controls[key] as FormControl<any, any>,
+        });
       }
     } else if (
       Array.isArray(control) &&
@@ -71,10 +70,9 @@ export function createFormControls<T>(
       // handle array of forms
       const formsArray = control as Array<Form<any>>;
       controls[key] = createFormControl<T>(key, control as any, [], setState);
-      assignHooklessFormArray(
-        formsArray,
-        { current: controls[key] as FormControl<any, any> }
-      );
+      assignHooklessFormArray(formsArray, {
+        current: controls[key] as FormControl<any, any>,
+      });
     } else if (Array.isArray(control)) {
       // assuming that this is just an array of objectsl go on as normal
       controls[key] = createFormControl<T>(key, control as any, [], setState);
@@ -87,7 +85,12 @@ export function createFormControls<T>(
         // this isn't so elegant, but we need to recreate the nested form AFTER the parent control has been created so we can hook into its .value setter.
         controls[key] = createFormControl<T>(
           key,
-          () => new Form(primitiveControls),
+          () =>
+            new Form(
+              primitiveControls,
+              undefined,
+              controls[key] as FormControl<any, any>
+            ),
           [],
           setState
         );
@@ -101,7 +104,8 @@ export function createFormControls<T>(
                 ? oldState(oldFormCached)
                 : oldState;
             (controls[key] as FormControl<any, any>).value = value;
-          }
+          },
+          controls[key] as FormControl<any, any>
         );
       } else {
         controls[key] = control as any as FormControl<any, T>;
@@ -169,14 +173,20 @@ export function assignHooklessFormArray<T>(
   arr: Array<Form<T>>,
   controlFactory: RefOrFactory<FormControl<Form<T>[], any>>
 ): void {
-  const control = resolveRefOrFactory(controlFactory);
-  if (!control) {
+  const rControl = resolveRefOrFactory(controlFactory);
+  if (!rControl) {
     return;
   }
-  control.patchValue(
+  rControl.patchValue(
     (arr as Array<Form<any>>).map((formInstance, index) => {
       const setState = (oldState: any) => {
-        const control = resolveRefOrFactory(controlFactory);
+        // get the newest control reference
+        const control =
+          ((rControl as any)?._versionRef?.current?.current as FormControl<
+            Array<Form<any>>,
+            any
+          >) ?? rControl;
+
         const oldFormCached = () => (control.value as Array<Form<T>>)[index];
         const value: Form<T> =
           typeof oldState === "function" ? oldState(oldFormCached()) : oldState;
@@ -192,7 +202,8 @@ export function assignHooklessFormArray<T>(
       if (BaseForm.needsHook(formInstance)) {
         const newForm = new Form<any>(
           (formInstance as any).__primitiveControls,
-          setState
+          setState,
+          rControl as FormControl<any, any>
         );
         return newForm;
       } else {

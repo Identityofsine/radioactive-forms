@@ -16,27 +16,37 @@ type AcceptedControls<T> =
 export class Form<T> extends BaseForm<T, Form<T>> {
   private readonly __form = true;
   private readonly __primitiveControls: AcceptedControls<T>;
+  private __parentControl?: FormControl<unknown, unknown>;
   private _controls: FormControlMap<T>;
   private _flattenedControls: FormControl<any, T>[];
   private _invalids: FormControl<any, T>[] = [];
 
   constructor(
-    controls: FormControlNonArrayPrimitiveMap<T>,
+    controls: FormControlPrimitiveMap<T>,
     setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
+    parentControl?: FormControl<unknown, unknown>
+  );
+  constructor(
+    controls: FormControlNonArrayPrimitiveMap<T>,
+    setState?: React.Dispatch<React.SetStateAction<Form<T>>>
   );
   constructor(
     controls: FormControlPrimitiveMap<T>,
-    setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
+    setState?: React.Dispatch<React.SetStateAction<Form<T>>>
   );
   constructor(
     controls: FormControlMap<T>,
-    setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
+    setState?: React.Dispatch<React.SetStateAction<Form<T>>>
   );
   constructor(
     controls: AcceptedControls<T>,
     setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
+    parentControl?: FormControl<unknown, unknown>
   ) {
     super(setState);
+    if (parentControl) {
+      this.__parentControl = parentControl;
+    }
     this.__primitiveControls = controls;
     this._controls = createFormControls(controls, (updateAction) => {
       if (typeof updateAction === "function") {
@@ -84,20 +94,20 @@ export class Form<T> extends BaseForm<T, Form<T>> {
   }
 
   public getControl<K extends keyof T>(
-    key: K,
+    key: K
   ): FormControl<T[K], T> | undefined {
     return this._controls?.[key] as FormControl<T[K], T> | undefined;
   }
 
   public addControls<T>(controlMap: AcceptedControls<T>): void {
     const foundKey = Object.keys(controlMap).find(
-      (key) => key in this._controls,
+      (key) => key in this._controls
     );
     if (foundKey?.length > 0) {
       console.dError(
         `Form with controls:`,
         this._controls,
-        `. Control with key: ${String(foundKey)} already exists.`,
+        `. Control with key: ${String(foundKey)} already exists.`
       );
       return;
     }
@@ -143,7 +153,7 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     console.dLog(
       `Form with controls:`,
       this._controls,
-      `set to readonly: ${value}`,
+      `set to readonly: ${value}`
     );
     // Use clone to ensure React detects the change
     this.propagate(this.clone());
@@ -159,7 +169,7 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     console.dLog(
       `Form with controls:`,
       this._controls,
-      `set to disabled: ${value}`,
+      `set to disabled: ${value}`
     );
     // Use clone to ensure React detects the change
     this.propagate(this.clone());
@@ -175,11 +185,11 @@ export class Form<T> extends BaseForm<T, Form<T>> {
       const controlKey = this._controls?.[key];
       if (controlKey) {
         console.dLog(
-          `Patching value for key: ${key} with value: ${values[key]}`,
+          `Patching value for key: ${key} with value: ${values[key]}`
         );
         if (Form.isForm(controlKey.value)) {
           (controlKey.value as Form<any>).patchValue(
-            values[key] as Partial<any>,
+            values[key] as Partial<any>
           );
           continue;
         }
@@ -190,7 +200,7 @@ export class Form<T> extends BaseForm<T, Form<T>> {
         console.dError(
           `Form with controls:`,
           this._controls,
-          `. No control found for key: ${key}`,
+          `. No control found for key: ${key}`
         );
       }
     }
@@ -211,12 +221,12 @@ export class Form<T> extends BaseForm<T, Form<T>> {
         // check if form control array
         if (FormControl.isFormControl(value[0])) {
           result[key] = value.map(
-            (v) => (v as unknown as FormControl<any, any>).value,
+            (v) => (v as unknown as FormControl<any, any>).value
           ) as any;
         } else if (Form.isForm(value[0])) {
           // list of forms
           result[key] = value.map((v) =>
-            (v as unknown as Form<any>).build(),
+            (v as unknown as Form<any>).build()
           ) as any;
         } else {
           result[key] = value as any;
@@ -240,7 +250,7 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     this._dirty = this._flattenedControls?.some((control) => control.dirty);
     this._touched = this._flattenedControls?.some((control) => control.touched);
     const invalidControls = this._flattenedControls?.collect(
-      (control) => !control.valid,
+      (control) => !control.valid
     );
     this._valid = invalidControls?.length === 0;
     this._invalids = invalidControls;
