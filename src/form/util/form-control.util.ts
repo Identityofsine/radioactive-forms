@@ -9,7 +9,35 @@ import { BaseForm } from "../base-form";
 import { Form } from "../form";
 import { FormControl } from "../formcontrol";
 import {} from "../../util";
+import { formControl } from "../functional/formControl";
 
+/**
+ * Creates a FormControlMap from various control configuration formats.
+ * Handles primitive values, arrays, nested forms, and form arrays.
+ * 
+ * @template T - The type of the form data structure
+ * @param form - Control configuration in various supported formats
+ * @param setState - React state setter function for propagating updates
+ * @returns A map of FormControl instances keyed by property name
+ * @throws {Error} If form is not a non-null object
+ * 
+ * @remarks
+ * This function intelligently handles different control configurations:
+ * - Simple values: Creates FormControl with no validators
+ * - [value, validator]: Creates FormControl with single validator
+ * - [value, [validators]]: Creates FormControl with multiple validators
+ * - Nested Forms: Sets up proper state hooks and parent-child relationships
+ * - Arrays of Forms: Sets up array reactivity and state propagation
+ * 
+ * @example
+ * ```typescript
+ * const controls = createFormControls({
+ *   name: ['John', Validators.required],
+ *   age: [30],
+ *   address: new Form({ street: [''], city: [''] })
+ * }, setState);
+ * ```
+ */
 export function createFormControls<T>(
   form:
     | FormControlPrimitiveMap<T>
@@ -47,7 +75,7 @@ export function createFormControls<T>(
         "and validators:",
         validators
       );
-      controls[key] = createFormControl(
+      controls[key] = formControl(
         key,
         initialValue,
         validators,
@@ -69,13 +97,13 @@ export function createFormControls<T>(
     ) {
       // handle array of forms
       const formsArray = control as Array<Form<any>>;
-      controls[key] = createFormControl<T>(key, control as any, [], setState);
+      controls[key] = formControl<T>(key, control as any, [], setState);
       assignHooklessFormArray(formsArray, {
         current: controls[key] as FormControl<any, any>,
       });
     } else if (Array.isArray(control)) {
       // assuming that this is just an array of objectsl go on as normal
-      controls[key] = createFormControl<T>(key, control as any, [], setState);
+      controls[key] = formControl<T>(key, control as any, [], setState);
     } else if (BaseForm.isFormLike(control)) {
       // handle nested forms
       if (Form.isForm(control) && Form.needsHook(control)) {
@@ -83,7 +111,7 @@ export function createFormControls<T>(
           | FormControlPrimitiveMap<any>
           | FormControlNonArrayPrimitiveMap<any>;
         // this isn't so elegant, but we need to recreate the nested form AFTER the parent control has been created so we can hook into its .value setter.
-        controls[key] = createFormControl<T>(
+        controls[key] = formControl<T>(
           key,
           () =>
             new Form(
@@ -112,52 +140,35 @@ export function createFormControls<T>(
       }
     } else {
       const initialValue = control as any;
-      controls[key] = createFormControl(key, initialValue, [], setState);
+      controls[key] = formControl(key, initialValue, [], setState);
     }
   }
   return controls;
 }
 
-export function createFormControl<T>(
-  key: keyof T,
-  initialValue:
-    | FormControlNonArrayPrimitive<T>
-    | ((setState?: React.Dispatch<React.SetStateAction<any>>) => void),
-  validators?: Array<ValidatorFn<T>>,
-  setState?: React.Dispatch<React.SetStateAction<any>>
-): FormControl<any, T> {
-  let initialVal: any = initialValue;
-  return new FormControl(
-    key,
-    initialVal as any,
-    validators || [],
-    (control) => {
-      if (setState) {
-        setState((oldForm: any) => {
-          if (!oldForm) return;
-          const controls = Object.assign(oldForm?._controls ?? {}, {
-            [key]: control,
-          });
-          const obj = Object.assign(
-            Object.create(Object.getPrototypeOf(oldForm)),
-            oldForm,
-            {
-              _controls: controls,
-              _flattenedControls: Object.values(controls),
-            }
-          );
-          return obj;
-        });
-      }
-    }
-  ) as FormControl<any, T>;
-}
+// Re-export from functional for backwards compatibility
+export { formControl as createFormControl } from "../functional/formControl";
 
+/**
+ * A reference object containing a current value
+ * @template T - The type of the referenced value
+ */
 export type Ref<T> = { current: T };
 
-// Accept either a ref-like object or a factory function returning the control
+/**
+ * Either a reference object or a factory function that returns the value
+ * @template T - The type of the value
+ */
 export type RefOrFactory<T> = { current: T } | (() => T);
 
+/**
+ * Resolves a RefOrFactory to its actual value
+ * @template T - The type of the value
+ * @param refOrFactory - Either a ref object or factory function
+ * @returns The resolved value or undefined if resolution fails
+ * 
+ * @internal
+ */
 function resolveRefOrFactory<T>(refOrFactory: RefOrFactory<T>): T | undefined {
   if (typeof refOrFactory === "function") {
     try {
@@ -169,6 +180,33 @@ function resolveRefOrFactory<T>(refOrFactory: RefOrFactory<T>): T | undefined {
   return (refOrFactory as { current: T })?.current;
 }
 
+/**
+ * Assigns state hooks to an array of Forms that were created without hooks (hookless forms).
+ * This enables reactive state management for forms created outside of React components.
+ * 
+ * @template T - The type of data each Form in the array manages
+ * @param arr - Array of Form instances to assign hooks to
+ * @param controlFactory - Reference or factory for the parent FormControl that contains this array
+ * 
+ * @remarks
+ * This function is crucial for enabling reactivity in form arrays. It:
+ * 1. Sets up state hooks for each form in the array
+ * 2. Ensures changes to individual forms propagate to the parent control
+ * 3. Maintains proper array reactivity when forms are added/removed
+ * 4. Preserves form instances while enabling state updates
+ * 
+ * @example
+ * ```typescript
+ * const formsArray = [
+ *   new Form({ name: ['John'] }),
+ *   new Form({ name: ['Jane'] })
+ * ];
+ * 
+ * assignHooklessFormArray(formsArray, { current: parentControl });
+ * ```
+ * 
+ * @internal
+ */
 export function assignHooklessFormArray<T>(
   arr: Array<Form<T>>,
   controlFactory: RefOrFactory<FormControl<Form<T>[], any>>
@@ -217,6 +255,20 @@ export function assignHooklessFormArray<T>(
   );
 }
 
+/**
+ * Type guard to check if a value is an array of validator functions
+ * @template T - The type being validated
+ * @param arr - Value to check
+ * @returns True if the value is an array of validator functions
+ * 
+ * @example
+ * ```typescript
+ * const validators = [Validators.required, Validators.email];
+ * if (isValidatorArray(validators)) {
+ *   // TypeScript knows validators is Array<ValidatorFn<T>>
+ * }
+ * ```
+ */
 export function isValidatorArray<T>(arr: any): arr is Array<ValidatorFn<T>> {
   return Array.isArray(arr) && arr.every((item) => typeof item === "function");
 }

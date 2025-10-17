@@ -8,32 +8,109 @@ import { FormControl } from "./formcontrol";
 import { createFormControls } from "./util/form-control.util";
 import { BaseForm } from "./base-form";
 
+/**
+ * Internal type for accepted control configurations
+ * @template T - The form data type
+ */
 type AcceptedControls<T> =
   | FormControlMap<T>
   | FormControlPrimitiveMap<T>
   | FormControlNonArrayPrimitiveMap<T>;
 
+/**
+ * Represents a group of FormControls that work together to manage complex form data.
+ * Form provides validation, state management, and React integration for multiple controls.
+ * 
+ * @template T - The type of the data structure the form manages
+ * 
+ * @example
+ * ```typescript
+ * interface User {
+ *   name: string;
+ *   email: string;
+ *   age: number;
+ * }
+ * 
+ * const userForm = new Form<User>({
+ *   name: ['', Validators.required],
+ *   email: ['', [Validators.required, Validators.email]],
+ *   age: [0]
+ * }, setState);
+ * ```
+ */
 export class Form<T> extends BaseForm<T, Form<T>> {
+  /**
+   * Internal marker used to identify Form instances
+   * @private
+   * @readonly
+   */
   private readonly __form = true;
+  
+  /**
+   * Stores the original primitive control configuration for recreating the form
+   * @private
+   * @readonly
+   */
   private readonly __primitiveControls: AcceptedControls<T>;
+  
+  /**
+   * Reference to the parent FormControl if this form is nested
+   * @private
+   */
   private __parentControl?: FormControl<unknown, unknown>;
+  
+  /**
+   * Map of all controls in this form, keyed by property name
+   * @private
+   */
   private _controls: FormControlMap<T>;
+  
+  /**
+   * Flattened array of all controls for easier iteration
+   * @private
+   */
   private _flattenedControls: FormControl<any, T>[];
+  
+  /**
+   * Array of controls that are currently invalid
+   * @private
+   */
   private _invalids: FormControl<any, T>[] = [];
 
+  /**
+   * Creates a new Form instance with FormControlPrimitiveMap configuration
+   * @param controls - Primitive control configuration
+   * @param setState - React state setter function
+   * @param parentControl - Optional parent control if this is a nested form
+   */
   constructor(
     controls: FormControlPrimitiveMap<T>,
     setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
     parentControl?: FormControl<unknown, unknown>
   );
+  /**
+   * Creates a new Form instance with FormControlNonArrayPrimitiveMap configuration
+   * @param controls - Non-array primitive control configuration
+   * @param setState - React state setter function
+   */
   constructor(
     controls: FormControlNonArrayPrimitiveMap<T>,
     setState?: React.Dispatch<React.SetStateAction<Form<T>>>
   );
+  /**
+   * Creates a new Form instance with FormControlPrimitiveMap configuration
+   * @param controls - Primitive control configuration
+   * @param setState - React state setter function
+   */
   constructor(
     controls: FormControlPrimitiveMap<T>,
     setState?: React.Dispatch<React.SetStateAction<Form<T>>>
   );
+  /**
+   * Creates a new Form instance with FormControlMap configuration
+   * @param controls - Form control map configuration
+   * @param setState - React state setter function
+   */
   constructor(
     controls: FormControlMap<T>,
     setState?: React.Dispatch<React.SetStateAction<Form<T>>>
@@ -85,20 +162,40 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     this._readonly = false;
   }
 
+  /**
+   * Gets the map of all controls in this form
+   * @returns The controls map
+   */
   get controls(): FormControlMap<T> {
     return this._controls;
   }
 
+  /**
+   * Gets the array of controls that are currently invalid
+   * @returns Array of invalid controls
+   */
   get invalids(): FormControl<any, T>[] {
     return this._invalids;
   }
 
+  /**
+   * Gets a specific control by its key
+   * @template K - The key type
+   * @param key - The key of the control to retrieve
+   * @returns The FormControl instance or undefined if not found
+   */
   public getControl<K extends keyof T>(
     key: K
   ): FormControl<T[K], T> | undefined {
     return this._controls?.[key] as FormControl<T[K], T> | undefined;
   }
 
+  /**
+   * Dynamically adds new controls to the form
+   * @template T - The type of controls being added
+   * @param controlMap - Map of new controls to add
+   * @throws {Error} If a control with the same key already exists
+   */
   public addControls<T>(controlMap: AcceptedControls<T>): void {
     const foundKey = Object.keys(controlMap).find(
       (key) => key in this._controls
@@ -143,10 +240,18 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     this._flattenedControls = Object.values(this._controls ?? {}) || [];
   }
 
+  /**
+   * Gets the read-only state of the form
+   * @returns True if the form is read-only
+   */
   override get readonly(): boolean {
     return this._readonly;
   }
 
+  /**
+   * Sets the read-only state of the form and all its controls
+   * @param value - True to make the form read-only, false otherwise
+   */
   override set readonly(value: boolean) {
     this._readonly = value;
     this._flattenedControls.forEach((control) => (control.readonly = value));
@@ -159,10 +264,18 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     this.propagate(this.clone());
   }
 
+  /**
+   * Gets the disabled state of the form
+   * @returns True if the form is disabled
+   */
   override get disabled(): boolean {
     return this._disabled;
   }
 
+  /**
+   * Sets the disabled state of the form and all its controls
+   * @param value - True to disable the form, false to enable it
+   */
   override set disabled(value: boolean) {
     this._disabled = value;
     this._flattenedControls.forEach((control) => (control.disabled = value));
@@ -175,11 +288,23 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     this.propagate(this.clone());
   }
 
+  /**
+   * Resets all controls in the form to their initial state
+   */
   public reset(): void {
     this._flattenedControls.forEach((control) => control.reset());
     console.dLog(`Form with controls:`, this._controls, `has been reset.`);
   }
 
+  /**
+   * Partially updates the form's values
+   * @param values - Partial object with values to update
+   * 
+   * @example
+   * ```typescript
+   * userForm.patchValue({ name: 'John Doe' });
+   * ```
+   */
   public patchValue(values: Partial<{ [K in keyof T]: T[K] }>): void {
     for (const key in values) {
       const controlKey = this._controls?.[key];
@@ -206,6 +331,17 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     }
   }
 
+  /**
+   * Builds and returns the final form value, extracting data from all controls
+   * Handles nested forms and arrays of forms recursively
+   * @returns The complete form data object
+   * 
+   * @example
+   * ```typescript
+   * const userData = userForm.build();
+   * // Returns: { name: 'John', email: 'john@example.com', age: 30 }
+   * ```
+   */
   public build(): T {
     const result = {} as T;
     for (const key in this._controls) {
@@ -238,11 +374,20 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     return result;
   }
 
+  /**
+   * Type guard to check if an object is a Form instance
+   * @param obj - Object to check
+   * @returns True if the object is a Form instance
+   */
   public static isForm(obj: any): obj is Form<any> {
     return obj && obj.__form === true;
   }
 
-  // TODO: improve this significantly
+  /**
+   * Internal method to update the form's state based on its controls
+   * Updates dirty, touched, valid states and invalid controls array
+   * @protected
+   */
   protected override internalUpdate(): void {
     if (this._flattenedControls === undefined) {
       this._flattenedControls = Object.values(this._controls ?? {}) || [];
