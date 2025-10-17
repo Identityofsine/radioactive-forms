@@ -14,13 +14,13 @@ import { formControl } from "../functional/formControl";
 /**
  * Creates a FormControlMap from various control configuration formats.
  * Handles primitive values, arrays, nested forms, and form arrays.
- * 
+ *
  * @template T - The type of the form data structure
  * @param form - Control configuration in various supported formats
  * @param setState - React state setter function for propagating updates
  * @returns A map of FormControl instances keyed by property name
  * @throws {Error} If form is not a non-null object
- * 
+ *
  * @remarks
  * This function intelligently handles different control configurations:
  * - Simple values: Creates FormControl with no validators
@@ -28,7 +28,7 @@ import { formControl } from "../functional/formControl";
  * - [value, [validators]]: Creates FormControl with multiple validators
  * - Nested Forms: Sets up proper state hooks and parent-child relationships
  * - Arrays of Forms: Sets up array reactivity and state propagation
- * 
+ *
  * @example
  * ```typescript
  * const controls = createFormControls({
@@ -75,12 +75,7 @@ export function createFormControls<T>(
         "and validators:",
         validators
       );
-      controls[key] = formControl(
-        key,
-        initialValue,
-        validators,
-        setState
-      );
+      controls[key] = formControl(key, initialValue, validators, setState);
       if (
         Array.isArray(initialValue) &&
         initialValue.length > 0 &&
@@ -111,7 +106,7 @@ export function createFormControls<T>(
           | FormControlPrimitiveMap<any>
           | FormControlNonArrayPrimitiveMap<any>;
         // this isn't so elegant, but we need to recreate the nested form AFTER the parent control has been created so we can hook into its .value setter.
-        controls[key] = formControl<T>(
+        const newForm = formControl<T>(
           key,
           () =>
             new Form(
@@ -122,6 +117,8 @@ export function createFormControls<T>(
           [],
           setState
         );
+        Object.assign(newForm, { _formId: control.formId });
+        controls[key] = newForm as any as FormControl<any, T>;
         (controls[key] as FormControl<any, any>).value = new Form(
           primitiveControls,
           (oldState) => {
@@ -166,7 +163,7 @@ export type RefOrFactory<T> = { current: T } | (() => T);
  * @template T - The type of the value
  * @param refOrFactory - Either a ref object or factory function
  * @returns The resolved value or undefined if resolution fails
- * 
+ *
  * @internal
  */
 function resolveRefOrFactory<T>(refOrFactory: RefOrFactory<T>): T | undefined {
@@ -183,28 +180,28 @@ function resolveRefOrFactory<T>(refOrFactory: RefOrFactory<T>): T | undefined {
 /**
  * Assigns state hooks to an array of Forms that were created without hooks (hookless forms).
  * This enables reactive state management for forms created outside of React components.
- * 
+ *
  * @template T - The type of data each Form in the array manages
  * @param arr - Array of Form instances to assign hooks to
  * @param controlFactory - Reference or factory for the parent FormControl that contains this array
- * 
+ *
  * @remarks
  * This function is crucial for enabling reactivity in form arrays. It:
  * 1. Sets up state hooks for each form in the array
  * 2. Ensures changes to individual forms propagate to the parent control
  * 3. Maintains proper array reactivity when forms are added/removed
  * 4. Preserves form instances while enabling state updates
- * 
+ *
  * @example
  * ```typescript
  * const formsArray = [
  *   new Form({ name: ['John'] }),
  *   new Form({ name: ['Jane'] })
  * ];
- * 
+ *
  * assignHooklessFormArray(formsArray, { current: parentControl });
  * ```
- * 
+ *
  * @internal
  */
 export function assignHooklessFormArray<T>(
@@ -216,7 +213,7 @@ export function assignHooklessFormArray<T>(
     return;
   }
   rControl.patchValue(
-    (arr as Array<Form<any>>).map((formInstance, index) => {
+    (arr as Array<Form<any>>).map((formInstance) => {
       const setState = (oldState: any) => {
         // get the newest control reference
         const control =
@@ -225,15 +222,24 @@ export function assignHooklessFormArray<T>(
             any
           >) ?? rControl;
 
-        const oldFormCached = () => (control.value as Array<Form<T>>)[index];
-        const value: Form<T> =
-          typeof oldState === "function" ? oldState(oldFormCached()) : oldState;
         if (!Array.isArray(control.value)) {
           return;
         }
+        const index = (control.value as Array<Form<T>>)?.findIndex(
+          (f) => f?.formId === formInstance.formId
+        );
+
+        const oldFormCached = () => (control.value as Array<Form<T>>)[index];
+        const value: Form<T> =
+          typeof oldState === "function" ? oldState(oldFormCached()) : oldState;
+
         const currentArray = control.value as Array<Form<any>>;
         const nextArray = currentArray.slice();
-        nextArray[index] = value; // preserve instance; only replace changed slot
+        if (index === -1) {
+          // this is pretty much impossible.
+        } else {
+          nextArray[index] = value; // preserve instance; only replace changed slot
+        }
         control.patchValue(nextArray);
       };
 
@@ -243,9 +249,13 @@ export function assignHooklessFormArray<T>(
           setState,
           rControl as FormControl<any, any>
         );
+        Object.assign(newForm, { _formId: formInstance.formId });
         return newForm;
       } else {
-        Object.assign(formInstance, { _setState: setState });
+        Object.assign(formInstance, {
+          _setState: setState,
+          _formId: formInstance.formId,
+        });
         return formInstance;
       }
     }),
@@ -260,7 +270,7 @@ export function assignHooklessFormArray<T>(
  * @template T - The type being validated
  * @param arr - Value to check
  * @returns True if the value is an array of validator functions
- * 
+ *
  * @example
  * ```typescript
  * const validators = [Validators.required, Validators.email];
