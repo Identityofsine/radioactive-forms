@@ -140,9 +140,37 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   protected override internalUpdate(value: T): void {
     this._value = value;
     this.handleNewFormObject();
+    this.handleNewArrayObject();
+    // TODO pass in reevaluater for nested forms
     this._dirty = true;
     this._touched = true;
     this._valid = this._validators.every((validator) => validator(this.value));
+  }
+
+  private handleNewArrayObject(): void {
+    if (!Array.isArray(this._value) || (
+      !this._contains_a_form && !this._value.some((item) => Form.isForm(item))
+    )) {
+      return;
+    }
+
+    this._value = new Proxy(this._value, {
+      set: (target, property, newValue) => {
+        const index = Number(property);
+        if (!isNaN(index)) {
+          const oldValue = target[index];
+          if (oldValue !== newValue) {
+            target[index] = newValue;
+            this.internalUpdate(this._value);
+            this.propagate(this.clone());
+          }
+          return true;
+        }
+        // Handle other properties like 'length'
+        (target as any)[property] = newValue;
+        return true;
+      },
+    })
   }
 
   private handleNewFormObject(): void {
@@ -176,6 +204,8 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
       }) as unknown as T;
     }
   }
+
+
 
   public static isFormControl(obj: any): obj is FormControl<any, any> {
     return obj && obj.__form_control === true;
