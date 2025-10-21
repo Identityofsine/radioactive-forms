@@ -19,13 +19,13 @@ describe("Form - nested forms and arrays", () => {
         name: "Bob",
         age: 35,
         permissions: ["read", "write"] as string[],
-      })
+      }),
     });
 
     assert.equal(
       form.controls.version.value,
       0,
-      "Version control should be initialized with 0",
+      "Version control should be initialized with 0"
     );
     assert.deepEqual(
       form.controls.user.value.build(),
@@ -33,7 +33,7 @@ describe("Form - nested forms and arrays", () => {
         name: "Alice",
         age: 28,
       },
-      "User form should match expected structure",
+      "User form should match expected structure"
     );
     assert.deepEqual(
       form.controls.admin.value.build(),
@@ -42,7 +42,7 @@ describe("Form - nested forms and arrays", () => {
         age: 35,
         permissions: ["read", "write"] as any,
       },
-      "Admin form should match expected structure",
+      "Admin form should match expected structure"
     );
 
     // Update nested form values and verify propagation
@@ -51,19 +51,19 @@ describe("Form - nested forms and arrays", () => {
     assert.equal(
       form.controls.user.value.controls.age.value,
       29,
-      "User age should be updated to 29",
+      "User age should be updated to 29"
     );
 
     assert.equal(
       form.dirty,
       true,
-      "Parent form should be marked dirty after nested form update",
+      "Parent form should be marked dirty after nested form update"
     );
 
     assert.equal(
       form.controls.user.dirty,
       true,
-      "User control should be marked dirty after update",
+      "User control should be marked dirty after update"
     );
 
     // reset
@@ -72,13 +72,13 @@ describe("Form - nested forms and arrays", () => {
     assert.equal(
       form.controls.user.value.controls.age.value,
       28,
-      "User age should be reset to initial value 28",
+      "User age should be reset to initial value 28"
     );
 
     assert.equal(
       form.dirty,
       false,
-      "Parent form should not be dirty after reset",
+      "Parent form should not be dirty after reset"
     );
   });
 
@@ -99,9 +99,18 @@ describe("Form - nested forms and arrays", () => {
     ];
 
     // form
-    const form = formGroup<{ users: Form<{ name: string; age: number }>[]; admins: Form<{ name: string; age: number }>[] }>({
-      users: obj.map((u) => formGroup(u)) as Form<{ name: string; age: number }>[],
-      admins: [obj.map((u) => formGroup(u)) as Form<{ name: string; age: number }>[], []],
+    const form = formGroup<{
+      users: Form<{ name: string; age: number }>[];
+      admins: Form<{ name: string; age: number }>[];
+    }>({
+      users: obj.map((u) => formGroup(u)) as Form<{
+        name: string;
+        age: number;
+      }>[],
+      admins: [
+        obj.map((u) => formGroup(u)) as Form<{ name: string; age: number }>[],
+        [],
+      ],
     });
 
     assert.equal(form.controls.users.value.length, 3, "Should have 3 users");
@@ -111,7 +120,7 @@ describe("Form - nested forms and arrays", () => {
     assert.equal(
       form.controls.users.value[0].controls.age.value,
       21,
-      "First user's age should be updated to 21",
+      "First user's age should be updated to 21"
     );
 
     // Add a new user form
@@ -123,12 +132,15 @@ describe("Form - nested forms and arrays", () => {
     );
     */
 
-    form.controls.users.value = [...form.controls.users.value, ...[
-      formGroup({
-        name: "User4",
-        age: 40,
-      }),
-    ]];
+    form.controls.users.value = [
+      ...form.controls.users.value,
+      ...[
+        formGroup({
+          name: "User4",
+          age: 40,
+        }),
+      ],
+    ];
 
     assert.equal(form.controls.users.value.length, 4, "Should have 4 users");
 
@@ -140,14 +152,14 @@ describe("Form - nested forms and arrays", () => {
     assert.equal(
       form.controls.admins.value[0].controls.age.value,
       36,
-      "First admin's age should be updated to 36",
+      "First admin's age should be updated to 36"
     );
 
     // Verify parent form is still dirty
     assert.equal(
       form.dirty,
       true,
-      "Parent form should remain dirty after admin update",
+      "Parent form should remain dirty after admin update"
     );
 
     // Add a new admin form
@@ -156,7 +168,7 @@ describe("Form - nested forms and arrays", () => {
       formGroup({
         name: "Admin4",
         age: 45,
-      })
+      }),
     ];
 
     assert.equal(form.controls.admins.value.length, 4, "Should have 4 admins");
@@ -165,12 +177,76 @@ describe("Form - nested forms and arrays", () => {
     assert.equal(
       form.controls.admins.value[3].controls.name.value,
       "Admin4",
-      "New admin's name should be Admin4",
+      "New admin's name should be Admin4"
     );
     assert.equal(
       form.controls.admins.value[3].controls.age.value,
       45,
-      "New admin's age should be 45",
+      "New admin's age should be 45"
     );
+  });
+  it("nested forms builds correct structure", () => {
+    const form = formGroup<{
+      profile: {
+        firstName: string;
+        lastName: string;
+        address: { street: string; city: string; zip: string };
+      };
+      settings: { theme: string; notifications: boolean }[];
+    }>({
+      profile: formGroup({
+        firstName: "John",
+        lastName: "Doe",
+        address: formGroup({
+          street: "123 Main St",
+          city: "Anytown",
+          zip: "12345",
+        }),
+      }),
+      settings: [
+        formGroup({
+          theme: "dark",
+          notifications: true,
+        }),
+        formGroup({
+          theme: "light",
+          notifications: false,
+        }),
+      ] as Form<{ theme: string; notifications: boolean }>[],
+    } as any);
+
+    form.controls.settings.value[0].controls.notifications.value = false;
+    form.controls.settings.value[1].controls.theme.value = "dark";
+
+    const built = form.build();
+    assert.deepEqual(
+      built,
+      {
+        profile: {
+          firstName: "John",
+          lastName: "Doe",
+          address: {
+            street: "123 Main St",
+            city: "Anytown",
+            zip: "12345",
+          },
+        },
+        settings: [
+          {
+            theme: "dark",
+            notifications: false,
+          },
+          {
+            theme: "dark",
+            notifications: false,
+          },
+        ],
+      },
+      "Built structure should match expected nested object"
+    );
+
+    assert.doesNotThrow(() => {
+      JSON.stringify(form);
+    });
   });
 });

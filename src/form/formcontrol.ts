@@ -7,7 +7,7 @@ import {
   Ref,
   RefOrFactory,
 } from "./util/form-control.util";
-import {} from "../util";
+import { } from "../util";
 
 /**
  * Internal type representing version tracking for FormControl instances
@@ -22,10 +22,10 @@ type FormControlVersion<T, O> = {
 /**
  * Represents a single form control that manages a value, validation, and state.
  * FormControl is the building block of reactive forms, handling individual field values.
- * 
+ *
  * @template T - The type of the value that the FormControl will hold
  * @template O - The type this FormControl belongs to (parent form type)
- * 
+ *
  * @example
  * ```typescript
  * const nameControl = new FormControl<string, User>(
@@ -43,37 +43,37 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
    * @readonly
    */
   private readonly __form_control = true;
-  
+
   /**
    * Indicates whether this control contains a nested Form or array of Forms
    * @private
    */
   private _contains_a_form: boolean = false;
-  
+
   /**
    * The key/property name this control represents in the parent form
    * @private
    */
   private _key: keyof T;
-  
+
   /**
    * The initial value of the control (used for reset operations)
    * @private
    */
   private _initialValue: T;
-  
+
   /**
    * The current value of the control
    * @private
    */
   private _value: T;
-  
+
   /**
    * Array of validation functions to apply to the control's value
    * @private
    */
   private _validators: Array<ValidatorFn<T>>;
-  
+
   /**
    * Reference to track control versions for proper React state updates
    * @private
@@ -339,6 +339,14 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
         this.value = val as unknown as T;
       }) as unknown as T;
     }
+  }
+
+  /**
+   * Converts the control's value to JSON, this avoids circular references
+   * @returns The control's value in JSON format
+   */
+  public toJSON() {
+    return this.value;
   }
 
   /**

@@ -1,4 +1,4 @@
-import {} from "../util";
+import { } from "../util";
 import type {
   FormControlMap,
   FormControlNonArrayPrimitiveMap,
@@ -45,32 +45,32 @@ export class Form<T> extends BaseForm<T, Form<T>> {
    * @readonly
    */
   private readonly __form = true;
-  
+
   /**
    * Stores the original primitive control configuration for recreating the form
    * @private
    * @readonly
    */
   private readonly __primitiveControls: AcceptedControls<T>;
-  
+
   /**
    * Reference to the parent FormControl if this form is nested
    * @private
    */
   private __parentControl?: FormControl<unknown, unknown>;
-  
+
   /**
    * Map of all controls in this form, keyed by property name
    * @private
    */
   private _controls: FormControlMap<T>;
-  
+
   /**
    * Flattened array of all controls for easier iteration
    * @private
    */
   private _flattenedControls: FormControl<any, T>[];
-  
+
   /**
    * Array of controls that are currently invalid
    * @private
@@ -372,6 +372,16 @@ export class Form<T> extends BaseForm<T, Form<T>> {
       }
     }
     return result;
+  }
+
+
+  /**
+  * Converts the form to JSON by building its value
+  * This avoids circular references during serialization
+  * @returns The JSON representation of the form's value
+  */
+  public toJSON() {
+    return this.build();
   }
 
   /**
