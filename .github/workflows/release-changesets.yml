@@ -20,6 +20,7 @@ jobs:
           always-auth: true
           cache: npm
       - run: npm ci
+      -npm run test
       - name: Prepare publish script
         run: |
           chmod +x .github/scripts/publish-if-needed.mjs || true

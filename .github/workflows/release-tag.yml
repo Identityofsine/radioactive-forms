@@ -18,6 +18,7 @@ jobs:
           scope: '@identityofsine'
           cache: npm
       - run: npm ci
+      - run: npm run test
       - name: Skip if version already exists on npm
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
