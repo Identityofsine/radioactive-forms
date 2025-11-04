@@ -240,12 +240,17 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
       !Array.isArray(this._value)
     ) {
       const updatedValue = { ...this._value, ...newValue };
-      this.value = updatedValue as T; // Use the setter to ensure dirty and valid are updated
+      this.updateValueInternal(updatedValue as T, opts?.stateless ?? false);
     } else {
-      this.value = newValue as T; // For non-object types, just set the value directly
+      this.updateValueInternal(newValue as T, opts?.stateless ?? false);
     }
-    if (!opts.stateless) {
-      this.propagate(this.clone());
+  }
+
+  private updateValueInternal(newValue: T, stateless: boolean = false): void {
+    if (stateless) {
+      this.value = newValue;
+    } else {
+      this.internalUpdate(newValue)
     }
   }
 
