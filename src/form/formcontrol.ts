@@ -244,10 +244,13 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     } else {
       this.updateValueInternal(newValue as T, opts?.stateless ?? false);
     }
+    if (!opts?.stateless) {
+      this.propagate(this.clone());
+    }
   }
 
   private updateValueInternal(newValue: T, stateless: boolean = false): void {
-    if (stateless) {
+    if (!stateless) {
       this.value = newValue;
     } else {
       this.internalUpdate(newValue)

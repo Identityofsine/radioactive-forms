@@ -12,13 +12,14 @@ import { useForm } from "../react/use-form-hook";
 import { Form, FormControl, Validators } from "../form";
 import { formGroup } from "../form/functional";
 import { BaseFormComponent } from "../test/react-test-utils";
+import { useFormGroup } from "../react";
 
 describe("FormControl Operations", () => {
   it("FormControl.key returns the correct key", async () => {
     // Tests that the key property correctly identifies the control
     const Component = () => {
       const { form } = useForm({ testField: "value" }, {}, []);
-      
+
       useEffect(() => {
         if (!form) return;
         expect(form.controls.testField.key).toBe("testField");
@@ -34,7 +35,7 @@ describe("FormControl Operations", () => {
   it("FormControl value getter returns current value", async () => {
     // Tests that value getter returns the current control value
     let formRef: Form<any> | undefined;
-    
+
     render(
       <BaseFormComponent
         schema={{ testField: "initialValue" }}
@@ -53,7 +54,7 @@ describe("FormControl Operations", () => {
   it("FormControl value setter updates value and marks dirty/touched", async () => {
     // Tests that setting a value updates state flags appropriately
     let formRef: Form<any> | undefined;
-    
+
     render(
       <BaseFormComponent
         schema={{ testField: "initialValue" }}
@@ -64,16 +65,16 @@ describe("FormControl Operations", () => {
     );
 
     await waitFor(() => expect(formRef).toBeDefined());
-    
+
     // Initial state
     expect(formRef?.controls.testField.dirty).toBe(false);
     expect(formRef?.controls.testField.touched).toBe(false);
-    
+
     // Update value
     await act(async () => {
       formRef!.controls.testField.value = "newValue";
     });
-    
+
     await waitFor(() => {
       expect(formRef?.controls.testField.value).toBe("newValue");
       expect(formRef?.controls.testField.dirty).toBe(true);
@@ -84,7 +85,7 @@ describe("FormControl Operations", () => {
   it("FormControl.reset() restores initial value and clears dirty/touched", async () => {
     // Tests that reset restores control to initial state
     let formRef: Form<any> | undefined;
-    
+
     render(
       <BaseFormComponent
         schema={{ testField: ["initialValue", [Validators.required]] }}
@@ -95,22 +96,22 @@ describe("FormControl Operations", () => {
     );
 
     await waitFor(() => expect(formRef).toBeDefined());
-    
+
     // Modify value
     await act(async () => {
       formRef!.controls.testField.value = "modifiedValue";
     });
-    
+
     await waitFor(() => {
       expect(formRef?.controls.testField.value).toBe("modifiedValue");
       expect(formRef?.controls.testField.dirty).toBe(true);
     });
-    
+
     // Reset
     await act(async () => {
       formRef!.controls.testField.reset();
     });
-    
+
     await waitFor(() => {
       expect(formRef?.controls.testField.value).toBe("initialValue");
       expect(formRef?.controls.testField.dirty).toBe(false);
@@ -121,10 +122,10 @@ describe("FormControl Operations", () => {
   it("FormControl.patchValue merges partial objects", async () => {
     // Tests that patchValue correctly merges object properties
     let formRef: Form<any> | undefined;
-    
+
     render(
       <BaseFormComponent
-        schema={{ 
+        schema={{
           user: { name: "John", age: 30, email: "john@example.com" }
         }}
         formRef={(form) => (formRef = form)}
@@ -134,12 +135,12 @@ describe("FormControl Operations", () => {
     );
 
     await waitFor(() => expect(formRef).toBeDefined());
-    
+
     // Patch only one property
     await act(async () => {
       formRef!.controls.user.patchValue({ name: "Jane" });
     });
-    
+
     await waitFor(() => {
       expect(formRef?.controls.user.value).toEqual({
         name: "Jane",
@@ -152,7 +153,7 @@ describe("FormControl Operations", () => {
   it("FormControl.patchValue replaces primitive values", async () => {
     // Tests that patchValue replaces non-object values
     let formRef: Form<any> | undefined;
-    
+
     render(
       <BaseFormComponent
         schema={{ count: 5 }}
@@ -163,11 +164,11 @@ describe("FormControl Operations", () => {
     );
 
     await waitFor(() => expect(formRef).toBeDefined());
-    
+
     await act(async () => {
       formRef!.controls.count.patchValue(10);
     });
-    
+
     await waitFor(() => {
       expect(formRef?.controls.count.value).toBe(10);
     });
@@ -176,7 +177,7 @@ describe("FormControl Operations", () => {
   it("FormControl.isFormControl() correctly identifies FormControl instances", async () => {
     // Tests the static method for type checking
     let formRef: Form<any> | undefined;
-    
+
     const Component = () => {
       const { form } = useForm({ testField: "value" }, {}, []);
       formRef = form;
@@ -184,7 +185,7 @@ describe("FormControl Operations", () => {
     };
 
     render(<Component />);
-    
+
     await waitFor(() => expect(formRef).toBeDefined());
     await waitFor(() => {
       expect(FormControl.isFormControl(formRef!.controls.testField)).toBe(true);
@@ -230,7 +231,7 @@ describe("FormControl Operations", () => {
   it("FormControl tracks dirty state correctly across multiple changes", async () => {
     // Tests dirty state persistence through multiple value changes
     let formRef: Form<any> | undefined;
-    
+
     render(
       <BaseFormComponent
         schema={{ counter: 0 }}
@@ -292,5 +293,84 @@ describe("FormControl Operations", () => {
       expect(formRef?.controls.user.value.disabled).toBe(true);
     });
   });
+
+  it("FormControl.patchValue reactively replaces value", async () => {
+    // Tests that patchValue replaces non-object values
+    let formRef: Form<any> | undefined;
+
+    const FormTest = () => {
+      const { form } = useFormGroup() as { form: Form<{ count: number }> };
+
+      return (
+        <span data-testid="value-display">
+          {form?.controls?.count?.value}
+        </span>
+      )
+    }
+
+    const { getByTestId } = render(
+      <BaseFormComponent
+        schema={{ count: 5 }}
+        formRef={(form) => (formRef = form)}
+      >
+        <FormTest />
+      </BaseFormComponent>
+    );
+
+    await waitFor(() => expect(formRef).toBeDefined());
+    await waitFor(() => expect(getByTestId("value-display").textContent, "the span should of rendered").toBeDefined());
+    await waitFor(() => expect(getByTestId("value-display").textContent, "count initally should be 5").toBe("5"));
+
+    await act(async () => {
+      formRef!.controls.count.patchValue(10);
+    });
+
+
+    await waitFor(() => expect(getByTestId("value-display").textContent, "patchValue should of changed count to 10").toBe("10"));
+
+    await waitFor(() => {
+      expect(formRef?.controls.count.value, "patchValue should of changed count to 10").toBe(10);
+    });
+  });
+
+  it("FormControl.patchValue reactively doesn't replace value", async () => {
+    // Tests that patchValue replaces non-object values
+    let formRef: Form<any> | undefined;
+
+    const FormTest = () => {
+      const { form } = useFormGroup() as { form: Form<{ count: number }> };
+
+      return (
+        <span data-testid="value-display">
+          {form?.controls?.count?.value}
+        </span>
+      )
+    }
+
+    const { getByTestId } = render(
+      <BaseFormComponent
+        schema={{ count: 5 }}
+        formRef={(form) => (formRef = form)}
+      >
+        <FormTest />
+      </BaseFormComponent>
+    );
+
+    await waitFor(() => expect(formRef).toBeDefined());
+    await waitFor(() => expect(getByTestId("value-display").textContent, "the span should of rendered").toBeDefined());
+    await waitFor(() => expect(getByTestId("value-display").textContent, "count initally should be 5").toBe("5"));
+
+    await act(async () => {
+      formRef!.controls.count.patchValue(10, { stateless: true });
+    });
+
+
+    await waitFor(() => expect(getByTestId("value-display").textContent, "patchValue should of not been re-rendered").toBe("5"));
+
+    await waitFor(() => {
+      expect(formRef?.controls.count.value, "patchValue should of changed count to 10").toBe(10);
+    });
+  });
+
 });
 
