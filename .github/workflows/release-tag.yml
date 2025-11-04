@@ -19,19 +19,28 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test
-      - name: Skip if version already exists on npm
+      - name: Prepare publish script
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "Tag version: $VERSION"
-          if npm view @identityofsine/radioactive-forms@"$VERSION" version >/dev/null 2>&1; then
-            echo "Version $VERSION already exists on npm. Skipping publish.";
-            echo "skip_publish=true" >> $GITHUB_OUTPUT;
-          else
-            echo "skip_publish=false" >> $GITHUB_OUTPUT;
-          fi
+          chmod +x .github/scripts/publish-if-needed.mjs || true
+      - name: Check tag/package version and skip if already published
         id: check
-      - run: npm publish --provenance --access public
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Tag version: ${TAG_VERSION} | package.json version: ${PKG_VERSION}"
+          if [ "${TAG_VERSION}" != "${PKG_VERSION}" ]; then
+            echo "Tag and package.json version mismatch. Failing to prevent accidental publish." >&2
+            exit 1
+          fi
+          if npm view @identityofsine/radioactive-forms@"${PKG_VERSION}" version >/dev/null 2>&1; then
+            echo "Version ${PKG_VERSION} already exists on npm. Skipping publish."
+            echo "skip_publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip_publish=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish to npm (if needed)
         if: steps.check.outputs.skip_publish == 'false'
+        run: node .github/scripts/publish-if-needed.mjs
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
