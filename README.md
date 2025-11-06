@@ -2,6 +2,8 @@
 
 Type-safe, reactive forms for React.
 
+> **Note:** The syntax of this project is inspired by Angular's FormBuilder, providing a familiar and intuitive API for defining form structures with initial values and validators.
+
 ## Overview
 
 - Typed controls with validators
