@@ -250,6 +250,14 @@ export function assignHooklessFormArray<T>(
           rControl as FormControl<any, any>
         );
         Object.assign(newForm, { _formId: formInstance.formId });
+        for (const key in formInstance.controls) {
+          if (newForm.controls?.[key] === undefined) {
+            continue;
+          }
+          Object.assign(newForm.controls?.[key], {
+            _value: (formInstance?.controls?.[key] as any)?._value,
+          })
+        }
         return newForm;
       } else {
         Object.assign(formInstance, {
