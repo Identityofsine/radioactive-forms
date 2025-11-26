@@ -7,7 +7,7 @@ import {
   Ref,
   RefOrFactory,
 } from "./util/form-control.util";
-import { } from "../util";
+import {} from "../util";
 
 /**
  * Internal type representing version tracking for FormControl instances
@@ -237,6 +237,8 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     if (
       typeof this._value === "object" &&
       this._value !== null &&
+      this._value instanceof Date === false &&
+      this._value !== null &&
       !Array.isArray(this._value)
     ) {
       const updatedValue = { ...this._value, ...newValue };
@@ -253,7 +255,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     if (!stateless) {
       this.value = newValue;
     } else {
-      this.internalUpdate(newValue)
+      this.internalUpdate(newValue);
     }
   }
 
