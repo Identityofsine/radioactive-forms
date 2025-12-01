@@ -1,3 +1,5 @@
+import { AdvancedValidatorReturn } from "../../types/validator.types";
+
 /**
  * Namespace containing common validator functions for form controls.
  * Validators return true when the value is valid, false when invalid.
@@ -28,19 +30,36 @@ export namespace Validators {
    * Validators.required({ name: 'John' }) // true
    * ```
    */
-  export const required = <T>(value: T): boolean => {
+  export function required<T>(value: T): AdvancedValidatorReturn {
     if (value === null || value === undefined) {
-      return false;
+      return {
+        valid: false,
+        message: 'This field is required.'
+      };
     }
     if (typeof value === 'string' && value.trim() === '') {
-      return false;
+      return {
+        valid: false,
+        message: 'This field is required.'
+      }
     }
     if (Array.isArray(value) && value.length === 0) {
-      return false;
+      return {
+        valid: false,
+        message: 'This field is required.'
+      }
     }
     if (typeof value === 'object' && !Array.isArray(value)) {
-      return Object.keys(value).length > 0;
+      const isValid = Object.keys(value).length > 0;
+      if (!isValid) {
+        return {
+          valid: false,
+          message: 'This field is required.'
+        }
+      }
     }
-    return true;
+    return {
+      valid: true
+    };
   }
 }
