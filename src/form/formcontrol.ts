@@ -1,5 +1,5 @@
 import { PatchValueProps } from "../types/control.types";
-import { ValidatorFn } from "../types/validator.types";
+import { AdvancedValidatorReturn, ValidatorFn } from "../types/validator.types";
 import { BaseForm } from "./base-form";
 import { Form } from "./form";
 import {
@@ -69,6 +69,15 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   private _value: T;
 
   /**
+   * A list of validation results from the last validation run
+   * @private
+  */
+  private _invalids: Array<{
+    fn: ValidatorFn<T>;
+    result: AdvancedValidatorReturn;
+  }> = [];
+
+  /**
    * Array of validation functions to apply to the control's value
    * @private
    */
@@ -108,7 +117,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     if (validators.length === 0 || !validators) {
       this._valid = true; // No validators means always validator
     } else {
-      this._valid = validators?.every((validator) => validator(this.value)); // Assume valid initially
+      this._valid = this.checkValidity();
     }
   }
 
@@ -200,6 +209,15 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   }
 
   /**
+   * Checks if a specific validator function is applied to the form-control
+   * * @param validator - The validator function to check
+   * * @returns True if the validator is applied, false otherwise
+   */
+  public hasValidator(validator: ValidatorFn<T>): boolean {
+    return this._validators.includes(validator);
+  }
+
+  /**
    * Sets the disabled state of the control and propagates to nested forms
    * @param disabled - True to disable the control, false to enable it
    */
@@ -260,6 +278,59 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   }
 
   /**
+   * @name checkValidity
+   *  * @description Validates the control's current value against its validators.
+   *  * @returns True if the value is valid, false otherwise
+   *  *  @remarks
+   *  This method runs all validators associated with the control and updates, but this also mutates this control's _invalids property to reflect the latest validation results.
+   *  * @example
+   *  ```typescript
+   *  const control = new FormControl<string, any>(
+   *    'name',
+   *    '',
+   *    [Validators.required]
+   *  );
+   *
+   *  control.checkValidity(); // false
+   *
+   *  control.value = 'John';
+   *
+   *  control.checkValidity(); // true
+   *  ```
+   */
+  private checkValidity(): boolean {
+    this._invalids = this._validators.map((validator) => {
+      const result = validator(this.value);
+      const mutatedResult =
+        typeof result === "boolean"
+          ? { valid: result }
+          : "then" in result
+          ? result.then((res) =>
+              typeof res === "boolean" ? { valid: res } : res
+            )
+          : (result as AdvancedValidatorReturn);
+      return {
+        fn: validator,
+        result: mutatedResult as AdvancedValidatorReturn,
+      };
+    });
+
+    return this._invalids.every(({ result }) => {
+      if (typeof result === "boolean") {
+        return result;
+      }
+      if (typeof result === "object" && "valid" in result) {
+        return result.valid;
+      }
+      return false;
+    });
+  }
+
+  public get invalids() {
+    return this._invalids;
+  }
+
+  /**
    * Internal method to update the control's value and run validation
    * @protected
    * @param value - The new value to set
@@ -271,7 +342,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     // TODO pass in reevaluater for nested forms
     this._dirty = true;
     this._touched = true;
-    this._valid = this._validators.every((validator) => validator(this.value));
+    this._valid = this.checkValidity();
   }
 
   /**
