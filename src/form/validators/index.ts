@@ -49,9 +49,16 @@ export namespace Validators {
         message: 'This field is required.'
       }
     }
-    if (typeof value === 'object' && !Array.isArray(value)) {
+    if (typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
       const isValid = Object.keys(value).length > 0;
       if (!isValid) {
+        return {
+          valid: false,
+          message: 'This field is required.'
+        }
+      }
+    } else if (typeof value === 'object' && value instanceof Date) {
+      if (isNaN(value.getTime())) {
         return {
           valid: false,
           message: 'This field is required.'
