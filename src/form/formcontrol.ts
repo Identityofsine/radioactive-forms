@@ -71,7 +71,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   /**
    * A list of validation results from the last validation run
    * @private
-  */
+   */
   private _invalids: Array<{
     fn: ValidatorFn<T>;
     result: AdvancedValidatorReturn;
@@ -185,18 +185,20 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     if (this._readonly === isReadonly) {
       return;
     }
-    if (this._contains_a_form) {
-      if (Array.isArray(this._value)) {
-        this._value.forEach((item) => {
-          if (Form.isForm(item)) {
-            item.readonly = isReadonly;
-          }
-        });
-      } else {
-        (this._value as Form<any>).readonly = isReadonly;
-      }
-    }
+
     this._readonly = isReadonly;
+
+    // Then propagate to nested forms
+    if (Array.isArray(this._value)) {
+      this._value
+        .filter((item) => Form.isFormLike(item))
+        .forEach((item) => {
+          (item as Form<any>).readonly = isReadonly;
+        });
+    } else if (BaseForm.isFormLike(this._value)) {
+      (this._value as unknown as Form<any>).readonly = isReadonly;
+    }
+
     this.propagate(this.clone());
   }
 
@@ -413,12 +415,17 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     // Single nested form
     if (Form.isForm(currentValue) && BaseForm.needsHook(currentValue)) {
       const primitiveControls = (currentValue as any).__primitiveControls;
-      this.value = new Form(primitiveControls, (oldState) => {
+      const nForm = new Form(primitiveControls, (oldState) => {
         const oldFormCached = this.value as unknown as Form<any>;
         const val: Form<any> =
           typeof oldState === "function" ? oldState(oldFormCached) : oldState;
         this.value = val as unknown as T;
       }) as unknown as T;
+      Object.assign(nForm, {
+        _readonly: this._readonly,
+        _disabled: this._disabled,
+      });
+      this._value = nForm;
     }
   }
 

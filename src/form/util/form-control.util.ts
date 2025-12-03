@@ -8,7 +8,7 @@ import { ValidatorFn } from "../../types/validator.types";
 import { BaseForm } from "../base-form";
 import { Form } from "../form";
 import { FormControl } from "../formcontrol";
-import {} from "../../util";
+import { } from "../../util";
 import { formControl } from "../functional/formControl";
 
 /**
@@ -117,9 +117,13 @@ export function createFormControls<T>(
           [],
           setState
         );
-        Object.assign(newForm, { _formId: control.formId });
+        Object.assign(newForm, {
+          _formId: control.formId,
+          _readonly: control.readonly,
+          _disabled: control.disabled,
+        });
         controls[key] = newForm as any as FormControl<any, T>;
-        (controls[key] as FormControl<any, any>).value = new Form(
+        const subNewForm = new Form(
           primitiveControls,
           (oldState) => {
             const oldFormCached = (controls[key] as FormControl<any, any>)
@@ -132,6 +136,11 @@ export function createFormControls<T>(
           },
           controls[key] as FormControl<any, any>
         );
+        Object.assign(subNewForm, {
+          _readonly: controls[key].readonly,
+          _disabled: controls[key].disabled,
+        });
+        (controls[key] as FormControl<any, any>).value = subNewForm;
       } else {
         controls[key] = control as any as FormControl<any, T>;
       }
@@ -243,26 +252,43 @@ export function assignHooklessFormArray<T>(
         control.patchValue(nextArray);
       };
 
+      const control =
+        ((rControl as any)?._versionRef?.current?.current as FormControl<
+          Array<Form<any>>,
+          any
+        >) ?? rControl;
+
       if (BaseForm.needsHook(formInstance)) {
         const newForm = new Form<any>(
           (formInstance as any).__primitiveControls,
           setState,
           rControl as FormControl<any, any>
         );
-        Object.assign(newForm, { _formId: formInstance.formId });
+
+        Object.assign(newForm, {
+          _formId: formInstance.formId,
+          _readonly: control.readonly,
+          _disabled: control.disabled,
+        });
+
         for (const key in formInstance.controls) {
           if (newForm.controls?.[key] === undefined) {
             continue;
           }
           Object.assign(newForm.controls?.[key], {
             _value: (formInstance?.controls?.[key] as any)?._value,
-          })
+            _readonly: control.readonly,
+            _disabled: control.disabled,
+          });
         }
+
         return newForm;
       } else {
         Object.assign(formInstance, {
           _setState: setState,
           _formId: formInstance.formId,
+          _readonly: control.readonly,
+          _disabled: control.disabled,
         });
         return formInstance;
       }
