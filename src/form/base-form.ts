@@ -89,6 +89,9 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
 
   /**
    * Type guard to check if an object is a BaseForm instance
+   *
+   * This applies to Form and FormControl instances.
+   *
    * @param obj - Object to check
    * @returns True if the object is a BaseForm instance
    */
