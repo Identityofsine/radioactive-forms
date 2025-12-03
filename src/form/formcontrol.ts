@@ -7,7 +7,7 @@ import {
   Ref,
   RefOrFactory,
 } from "./util/form-control.util";
-import {} from "../util";
+import { } from "../util";
 
 /**
  * Internal type representing version tracking for FormControl instances
@@ -246,7 +246,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
    * @param opts - Options for the patch operation
    * @param opts.stateless - If true, skips React state propagation (default: false)
    */
-  public patchValue(
+  public override patchValue(
     newValue: Partial<T>,
     opts: PatchValueProps = {
       stateless: false,
@@ -305,10 +305,10 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
         typeof result === "boolean"
           ? { valid: result }
           : "then" in result
-          ? result.then((res) =>
+            ? result.then((res) =>
               typeof res === "boolean" ? { valid: res } : res
             )
-          : (result as AdvancedValidatorReturn);
+            : (result as AdvancedValidatorReturn);
       return {
         fn: validator,
         result: mutatedResult as AdvancedValidatorReturn,

@@ -7,6 +7,7 @@ import type {
 import { FormControl } from "./formcontrol";
 import { createFormControls } from "./util/form-control.util";
 import { BaseForm } from "./base-form";
+import { PatchValueProps } from "../types/control.types";
 
 /**
  * Internal type for accepted control configurations
@@ -305,7 +306,7 @@ export class Form<T> extends BaseForm<T, Form<T>> {
    * userForm.patchValue({ name: 'John Doe' });
    * ```
    */
-  public patchValue(values: Partial<{ [K in keyof T]: T[K] }>): void {
+  public patchValue(values: Partial<{ [K in keyof T]: T[K] }>, opts?: PatchValueProps): void {
     for (const key in values) {
       const controlKey = this._controls?.[key];
       if (controlKey) {
@@ -314,13 +315,21 @@ export class Form<T> extends BaseForm<T, Form<T>> {
         );
         if (Form.isForm(controlKey.value)) {
           (controlKey.value as Form<any>).patchValue(
-            values[key] as Partial<any>
+            values[key] as Partial<any>,
+            opts
           );
           continue;
         }
-        (controlKey as FormControl<T[keyof T], T>).value = values[
-          key
-        ] as T[Extract<keyof T, string>];
+        if (opts?.stateless === true) {
+          Object.assign(
+            (controlKey as FormControl<T[keyof T], T>), { value: values[key] as T[Extract<keyof T, string>] }
+          )
+
+        } else {
+          (controlKey as FormControl<T[keyof T], T>).value = values[
+            key
+          ] as T[Extract<keyof T, string>];
+        }
       } else {
         console.dError(
           `Form with controls:`,
