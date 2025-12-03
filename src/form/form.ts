@@ -290,6 +290,24 @@ export class Form<T> extends BaseForm<T, Form<T>> {
   }
 
   /**
+   * Sets readonly/disabled state on form and controls without triggering propagation.
+   * Used internally when assigning forms to arrays to avoid callstack issues.
+   * @param readonly - The readonly state to set
+   * @param disabled - The disabled state to set
+   * @internal
+   */
+  public setStateWithoutPropagation(readonly: boolean, disabled: boolean): void {
+    this._readonly = readonly;
+    this._disabled = disabled;
+    this._flattenedControls.forEach((control) => {
+      Object.assign(control, {
+        _readonly: readonly,
+        _disabled: disabled,
+      });
+    });
+  }
+
+  /**
    * Resets all controls in the form to their initial state
    */
   public reset(): void {

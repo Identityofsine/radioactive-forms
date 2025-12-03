@@ -865,3 +865,284 @@ describe("Nested Forms - Readonly Edge Cases (Stress Tests)", () => {
     checkReadonly(form.controls.forms.value[0], true, "Set back to true");
   });
 });
+
+/**
+ * WAIVER AMOUNTS SCENARIO TESTS
+ *
+ * These tests specifically target the bug in waive-amounts.transaction-strategy.tsx
+ * where newly created forms don't consistently inherit parent readonly state.
+ */
+describe("Nested Forms - Waiver Amounts Scenario (Effect-Created Forms)", () => {
+  // Helper to simulate the waiver amount form creation pattern
+  const createWaiverAmountForm = (salaryYear: number, capValue?: number) =>
+    formGroup({
+      salaryYear,
+      capValue: capValue ?? 0,
+      taxValue: 0,
+      apronValue: 0,
+      mtsValue: 0,
+    });
+
+  it("forms created and assigned in effect should inherit readonly from parent", () => {
+    // Simulate: Parent form is readonly, then effect runs and creates new forms
+    const form = formGroup<{
+      transactionDate: string;
+      contractId: number | null;
+      transactionWaiverAmounts: Form<{
+        salaryYear: number;
+        capValue: number;
+        taxValue: number;
+        apronValue: number;
+        mtsValue: number;
+      }>[];
+    }>({
+      transactionDate: "2024-01-01",
+      contractId: null,
+      transactionWaiverAmounts: [] as any,
+    });
+
+    // Set form to readonly BEFORE the effect runs (simulating view mode)
+    form.readonly = true;
+    assert.equal(form.readonly, true, "Parent form should be readonly");
+    assert.equal(
+      form.controls.transactionWaiverAmounts.readonly,
+      true,
+      "Waiver amounts control should be readonly"
+    );
+
+    // Simulate the effect running and creating new waiver amount forms
+    // This is what happens in waive-amounts.transaction-strategy.tsx lines 159-162
+    form.controls.transactionWaiverAmounts.value = [
+      createWaiverAmountForm(2024, 1000000),
+      createWaiverAmountForm(2025, 1500000),
+      createWaiverAmountForm(2026, 2000000),
+    ];
+
+    // ALL newly created forms should inherit the readonly state
+    assert.equal(
+      form.controls.transactionWaiverAmounts.value.length,
+      3,
+      "Should have 3 waiver amount forms"
+    );
+
+    form.controls.transactionWaiverAmounts.value.forEach((waiverForm, index) => {
+      checkReadonly(waiverForm, true, `Waiver Amount Form ${index}`);
+    });
+  });
+
+  it("forms assigned to empty array control should inherit readonly", () => {
+    // Start with empty array, set readonly, then populate
+    const form = formGroup<{
+      waivers: Form<{ salaryYear: number }>[];
+    }>({
+      waivers: [] as Form<{ salaryYear: number }>[],
+    });
+
+    // Set readonly on empty array control
+    form.readonly = true;
+    assert.equal(form.controls.waivers.readonly, true, "Control should be readonly");
+
+    // Now assign forms to the empty array
+    form.controls.waivers.value = [
+      formGroup({ salaryYear: 2024 }),
+      formGroup({ salaryYear: 2025 }),
+    ];
+
+    // Both forms should be readonly
+    form.controls.waivers.value.forEach((f, i) => {
+      checkReadonly(f, true, `Form ${i} added to empty array`);
+    });
+  });
+
+  it("toggling readonly after forms are added should update all forms", () => {
+    const form = formGroup<{
+      waivers: Form<{ year: number }>[];
+    }>({
+      waivers: [] as Form<{ year: number }>[],
+    });
+
+    // Add forms while NOT readonly
+    form.controls.waivers.value = [
+      formGroup({ year: 2024 }),
+      formGroup({ year: 2025 }),
+    ];
+
+    // Verify not readonly
+    form.controls.waivers.value.forEach((f, i) => {
+      checkReadonly(f, false, `Form ${i} before readonly`);
+    });
+
+    // Toggle to readonly
+    form.readonly = true;
+
+    // All should now be readonly
+    form.controls.waivers.value.forEach((f, i) => {
+      checkReadonly(f, true, `Form ${i} after readonly=true`);
+    });
+
+    // Toggle back
+    form.readonly = false;
+
+    // All should be editable
+    form.controls.waivers.value.forEach((f, i) => {
+      checkReadonly(f, false, `Form ${i} after readonly=false`);
+    });
+  });
+
+  it("replacing array contents multiple times should always respect current readonly", () => {
+    const form = formGroup<{
+      items: Form<{ id: number }>[];
+    }>({
+      items: [formGroup({ id: 1 })] as Form<{ id: number }>[],
+    });
+
+    // Set readonly
+    form.readonly = true;
+
+    // Replace array contents multiple times
+    for (let i = 0; i < 5; i++) {
+      form.controls.items.value = [
+        formGroup({ id: i * 10 + 1 }),
+        formGroup({ id: i * 10 + 2 }),
+      ];
+
+      // Each time, all forms should be readonly
+      form.controls.items.value.forEach((f, idx) => {
+        checkReadonly(f, true, `Iteration ${i} Form ${idx}`);
+      });
+    }
+  });
+
+  it("control-level readonly should propagate to newly assigned forms", () => {
+    const form = formGroup<{
+      groupA: Form<{ name: string }>[];
+      groupB: Form<{ name: string }>[];
+    }>({
+      groupA: [] as Form<{ name: string }>[],
+      groupB: [] as Form<{ name: string }>[],
+    });
+
+    // Set readonly only on groupA control (not the whole form)
+    form.controls.groupA.readonly = true;
+
+    // Assign forms to both groups
+    form.controls.groupA.value = [formGroup({ name: "A1" }), formGroup({ name: "A2" })];
+    form.controls.groupB.value = [formGroup({ name: "B1" }), formGroup({ name: "B2" })];
+
+    // groupA forms should be readonly
+    form.controls.groupA.value.forEach((f, i) => {
+      checkReadonly(f, true, `GroupA Form ${i}`);
+    });
+
+    // groupB forms should NOT be readonly
+    form.controls.groupB.value.forEach((f, i) => {
+      checkReadonly(f, false, `GroupB Form ${i}`);
+    });
+  });
+
+  it("newly added form at end of array should inherit readonly", () => {
+    const form = formGroup<{
+      forms: Form<{ name: string }>[];
+    }>({
+      forms: [formGroup({ name: "First" })] as Form<{ name: string }>[],
+    });
+
+    form.readonly = true;
+
+    // Add a new form at the end
+    form.controls.forms.value = [
+      ...form.controls.forms.value,
+      formGroup({ name: "Second" }),
+    ];
+
+    // Check BOTH forms - especially the newly added one
+    assert.equal(form.controls.forms.value.length, 2, "Should have 2 forms");
+    checkReadonly(form.controls.forms.value[0], true, "First form (existing)");
+    checkReadonly(form.controls.forms.value[1], true, "Second form (newly added)");
+  });
+
+  it("forms created with formGroup() should inherit readonly when assigned", () => {
+    // This tests that forms created via formGroup (not already attached to a parent)
+    // properly inherit readonly when assigned to a control
+    const form = formGroup<{
+      waivers: Form<{ year: number; amount: number }>[];
+    }>({
+      waivers: [] as Form<{ year: number; amount: number }>[],
+    });
+
+    form.readonly = true;
+
+    // Create forms externally (like createTransactionWaiverAmountFormGroup does)
+    const newForms = [2024, 2025, 2026].map((year) =>
+      formGroup({ year, amount: year * 1000 })
+    );
+
+    // Assign them all at once
+    form.controls.waivers.value = newForms;
+
+    // All should be readonly
+    newForms.forEach((f, i) => {
+      // Check the forms in the control, not the original references
+      checkReadonly(form.controls.waivers.value[i], true, `Waiver form ${i}`);
+    });
+  });
+
+  it("disabled should also propagate to newly assigned forms", () => {
+    const form = formGroup<{
+      items: Form<{ value: number }>[];
+    }>({
+      items: [] as Form<{ value: number }>[],
+    });
+
+    form.disabled = true;
+
+    form.controls.items.value = [
+      formGroup({ value: 1 }),
+      formGroup({ value: 2 }),
+    ];
+
+    form.controls.items.value.forEach((f, i) => {
+      checkDisabled(f, true, `Item form ${i}`);
+    });
+  });
+
+  it("both readonly and disabled should propagate to newly assigned forms", () => {
+    const form = formGroup<{
+      items: Form<{ data: string }>[];
+    }>({
+      items: [] as Form<{ data: string }>[],
+    });
+
+    form.readonly = true;
+    form.disabled = true;
+
+    form.controls.items.value = [formGroup({ data: "test" })];
+
+    const item = form.controls.items.value[0];
+    checkReadonly(item, true, "Item after assignment");
+    checkDisabled(item, true, "Item after assignment");
+  });
+
+  it("sequential additions should all respect readonly", () => {
+    const form = formGroup<{
+      items: Form<{ id: number }>[];
+    }>({
+      items: [] as Form<{ id: number }>[],
+    });
+
+    form.readonly = true;
+
+    // Add items one by one (simulating multiple effect runs)
+    for (let i = 1; i <= 5; i++) {
+      form.controls.items.value = [
+        ...form.controls.items.value,
+        formGroup({ id: i }),
+      ];
+
+      // Check all forms after each addition
+      form.controls.items.value.forEach((f, idx) => {
+        checkReadonly(f, true, `After adding ${i}, form ${idx}`);
+      });
+    }
+  });
+});

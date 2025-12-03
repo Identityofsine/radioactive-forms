@@ -421,10 +421,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
           typeof oldState === "function" ? oldState(oldFormCached) : oldState;
         this.value = val as unknown as T;
       }) as unknown as T;
-      Object.assign(nForm, {
-        _readonly: this._readonly,
-        _disabled: this._disabled,
-      });
+      (nForm as Form<any>).setStateWithoutPropagation(this._readonly, this._disabled);
       this._value = nForm;
     }
   }
