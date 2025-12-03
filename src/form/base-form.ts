@@ -5,7 +5,7 @@ import { Cloneable, TopLevelFormState } from "../types/form.types";
 /**
  * Abstract base class for all form-related classes (Form and FormControl).
  * Provides core functionality for form state management, validation, and React integration.
- * 
+ *
  * @template T - The type of the value/data structure the form handles
  * @template Z - The type of the form instance (defaults to BaseForm<T>)
  */
@@ -221,10 +221,7 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
    * @param opts - Options for the patch operation
    * @param opts.stateless - If true, skips React state propagation (default: false)
    */
-  public abstract patchValue(
-    newValue: Partial<T>,
-    opts?: PatchValueProps
-  ): void;
+  public abstract patchValue(newValue: any, opts?: PatchValueProps): void;
 
   /**
    * Internal method to update form state without triggering React updates
@@ -248,5 +245,4 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
     BaseForm.usedIds.add(id);
     return id;
   }
-
 }

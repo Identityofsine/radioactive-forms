@@ -1,18 +1,19 @@
 {
   "name": "@identityofsine/radioactive-forms",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Powerful forms for React",
   "main": "src/index.ts",
   "scripts": {
     "dev": "concurrently \"npm run dev:example\" \"npm run dev:library\"",
     "example:dev": "cd example/basic-react-forms/ && npm run dev",
     "example:install": "cd example/basic-react-forms/ && npm install",
-    "test": "vitest run",
+    "test": "vitest run && npm run typecheck",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "typecheck": "tsc -p tsconfig.type-tests.json --noEmit",
-    "typecheck:watch": "tsc -p tsconfig.type-tests.json --watch --noEmit"
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "typecheck:watch": "tsc -p tsconfig.build.json --watch --noEmit",
+    "typecheck:type-tests": "tsc -p tsconfig.type-tests.json --noEmit"
   },
   "repository": {
     "type": "git",

@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strictNullChecks": false,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/__tests__/**",
+    "src/test/**",
+    "src/type-tests/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.stories.ts"
+  ]
+}
+
