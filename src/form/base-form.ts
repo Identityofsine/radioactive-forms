@@ -232,7 +232,9 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
    * @protected
    * @param value - Optional value to update to
    */
-  protected abstract internalUpdate(value?: T): void;
+  protected abstract internalUpdate(value?: T, args?: {
+    markAsDirty: boolean,
+  }): void;
 
   /**
    * Generates a unique form ID

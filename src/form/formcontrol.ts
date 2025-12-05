@@ -247,11 +247,13 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
    * @param newValue - Partial value to merge with current value
    * @param opts - Options for the patch operation
    * @param opts.stateless - If true, skips React state propagation (default: false)
+   * @param opts.markAsDirty - If false, does not mark the control as dirty (default: true)
    */
   public override patchValue(
     newValue: Partial<T>,
     opts: PatchValueProps = {
       stateless: false,
+      markAsDirty: true,
     }
   ): void {
     if (
@@ -262,21 +264,21 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
       !Array.isArray(this._value)
     ) {
       const updatedValue = { ...this._value, ...newValue };
-      this.updateValueInternal(updatedValue as T, opts?.stateless ?? false);
+      this.updateValueInternal(updatedValue as T, opts);
     } else {
-      this.updateValueInternal(newValue as T, opts?.stateless ?? false);
+      this.updateValueInternal(newValue as T, opts);
     }
     if (!opts?.stateless) {
       this.propagate(this.clone());
     }
   }
 
-  private updateValueInternal(newValue: T, stateless: boolean = false): void {
-    if (!stateless) {
-      this.value = newValue;
-    } else {
-      this.internalUpdate(newValue);
-    }
+  private updateValueInternal(newValue: T, {
+    markAsDirty = true,
+  }: { stateless?: boolean; markAsDirty?: boolean }): void {
+    this.internalUpdate(newValue, {
+      markAsDirty,
+    });
   }
 
   /**
@@ -337,12 +339,17 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
    * @protected
    * @param value - The new value to set
    */
-  protected override internalUpdate(value: T): void {
+  protected override internalUpdate(value: T, args?: {
+    markAsDirty: boolean,
+  }): void {
+    const markAsDirty = args?.markAsDirty ?? true;
     this._value = value;
     this.handleNewFormObject();
     this.handleNewArrayObject();
     // TODO pass in reevaluater for nested forms
-    this._dirty = true;
+    if (markAsDirty) {
+      this._dirty = true;
+    }
     this._touched = true;
     this._valid = this.checkValidity();
   }

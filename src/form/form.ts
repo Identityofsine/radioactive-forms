@@ -1,4 +1,4 @@
-import { } from "../util";
+import {} from "../util";
 import type {
   FormControlMap,
   FormControlNonArrayPrimitiveMap,
@@ -21,9 +21,9 @@ type AcceptedControls<T> =
 /**
  * Represents a group of FormControls that work together to manage complex form data.
  * Form provides validation, state management, and React integration for multiple controls.
- * 
+ *
  * @template T - The type of the data structure the form manages
- * 
+ *
  * @example
  * ```typescript
  * interface User {
@@ -31,7 +31,7 @@ type AcceptedControls<T> =
  *   email: string;
  *   age: number;
  * }
- * 
+ *
  * const userForm = new Form<User>({
  *   name: ['', Validators.required],
  *   email: ['', [Validators.required, Validators.email]],
@@ -296,7 +296,10 @@ export class Form<T> extends BaseForm<T, Form<T>> {
    * @param disabled - The disabled state to set
    * @internal
    */
-  public setStateWithoutPropagation(readonly: boolean, disabled: boolean): void {
+  public setStateWithoutPropagation(
+    readonly: boolean,
+    disabled: boolean
+  ): void {
     this._readonly = readonly;
     this._disabled = disabled;
     this._flattenedControls.forEach((control) => {
@@ -318,13 +321,16 @@ export class Form<T> extends BaseForm<T, Form<T>> {
   /**
    * Partially updates the form's values
    * @param values - Partial object with values to update
-   * 
+   *
    * @example
    * ```typescript
    * userForm.patchValue({ name: 'John Doe' });
    * ```
    */
-  public patchValue(values: Partial<{ [K in keyof T]: T[K] }>, opts?: PatchValueProps): void {
+  public patchValue(
+    values: Partial<{ [K in keyof T]: T[K] }>,
+    opts?: PatchValueProps
+  ): void {
     for (const key in values) {
       const controlKey = this._controls?.[key];
       if (controlKey) {
@@ -338,16 +344,11 @@ export class Form<T> extends BaseForm<T, Form<T>> {
           );
           continue;
         }
-        if (opts?.stateless === true) {
-          Object.assign(
-            (controlKey as FormControl<T[keyof T], T>), { value: values[key] as T[Extract<keyof T, string>] }
-          )
-
-        } else {
-          (controlKey as FormControl<T[keyof T], T>).value = values[
-            key
-          ] as T[Extract<keyof T, string>];
-        }
+        // Always use patchValue to properly handle all options (stateless, markAsDirty)
+        (controlKey as FormControl<T[keyof T], T>).patchValue(
+          values[key] as T[Extract<keyof T, string>],
+          opts
+        );
       } else {
         console.dError(
           `Form with controls:`,
@@ -362,7 +363,7 @@ export class Form<T> extends BaseForm<T, Form<T>> {
    * Builds and returns the final form value, extracting data from all controls
    * Handles nested forms and arrays of forms recursively
    * @returns The complete form data object
-   * 
+   *
    * @example
    * ```typescript
    * const userData = userForm.build();
@@ -401,12 +402,11 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     return result;
   }
 
-
   /**
-  * Converts the form to JSON by building its value
-  * This avoids circular references during serialization
-  * @returns The JSON representation of the form's value
-  */
+   * Converts the form to JSON by building its value
+   * This avoids circular references during serialization
+   * @returns The JSON representation of the form's value
+   */
   public toJSON() {
     return this.build();
   }
