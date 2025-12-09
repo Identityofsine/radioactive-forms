@@ -220,6 +220,36 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   }
 
   /**
+    * Adds a validator function to the form-control and recalculates validity
+  * @param validator - The validator function to add
+  */
+  public addValidator(validator: ValidatorFn<T>): void {
+    this._validators.push(validator);
+    this.recalculateValidity();
+  }
+
+  /**
+    * Removes a validator function from the form-control and recalculates validity
+  * @param validator - The validator function to remove
+  */
+  public removeValidator(validator: ValidatorFn<T>): void {
+    this._validators = this._validators.filter((v) => v !== validator);
+    this.recalculateValidity();
+  }
+
+  /**
+    * Recalculates the validity of the control based on its validators and propagates the change
+  */
+  private recalculateValidity(): void {
+    if (this._validators.length === 0 || !this._validators) {
+      this._valid = true; // No validators means always validators
+    } else {
+      this._valid = this.checkValidity();
+    }
+    this.propagate(this.clone());
+  }
+
+  /**
    * Sets the disabled state of the control and propagates to nested forms
    * @param disabled - True to disable the control, false to enable it
    */
