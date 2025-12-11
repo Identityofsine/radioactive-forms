@@ -161,6 +161,8 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     this._touched = false;
     this._valid = true;
     this._readonly = false;
+    // Ensure initial validity reflects control state (including invalid defaults)
+    this.internalUpdate();
   }
 
   /**
@@ -183,7 +185,9 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     * Gets whether the form passes all validation rules
   */
   public override get valid(): boolean {
-    return this._invalids.length <= 0 || this._flattenedControls?.every((c) => c.valid);
+    // Always recalculate to keep in sync with child controls
+    this.internalUpdate();
+    return this._valid;
   }
 
   /**
@@ -246,6 +250,7 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     });
     this._controls = Object.assign(this._controls, newControls);
     this._flattenedControls = Object.values(this._controls ?? {}) || [];
+    this.internalUpdate();
   }
 
   /**
@@ -323,6 +328,7 @@ export class Form<T> extends BaseForm<T, Form<T>> {
   public reset(): void {
     this._flattenedControls.forEach((control) => control.reset());
     console.dLog(`Form with controls:`, this._controls, `has been reset.`);
+    this.internalUpdate();
   }
 
   /**
@@ -436,13 +442,15 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     if (this._flattenedControls === undefined) {
       this._flattenedControls = Object.values(this._controls ?? {}) || [];
     }
-    this._dirty = this._flattenedControls?.some((control) => control.dirty);
-    this._touched = this._flattenedControls?.some((control) => control.touched);
-    const invalidControls = this._flattenedControls?.collect(
-      (control) => !control.valid
-    );
-    this._valid = invalidControls?.length === 0;
+
+    const controls = this._flattenedControls || [];
+    this._dirty = controls.some((control) => control.dirty);
+    this._touched = controls.some((control) => control.touched);
+
+    // Recompute invalid controls to keep state in sync with children
+    const invalidControls = controls.filter((control) => !control.valid);
     this._invalids = invalidControls;
+    this._valid = invalidControls.length === 0;
 
     // Do not propagate here; callers are responsible for state updates to
     // avoid conflicting React state transitions and preserve update ordering.

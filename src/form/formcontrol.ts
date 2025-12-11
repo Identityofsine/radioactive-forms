@@ -165,7 +165,7 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
     }
     this._dirty = false;
     this._touched = false;
-    this._valid = this._validators.every((validator) => validator(this.value));
+    this._valid = this.checkValidity();
     this.propagate(this.clone());
   }
 
@@ -233,7 +233,9 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   * @param validator - The validator function to remove
   */
   public removeValidator(validator: ValidatorFn<T>): void {
-    this._validators = this._validators.filter((v) => v !== validator);
+    this._validators = this._validators.filter(
+      (v) => v !== validator && v.toString() !== validator.toString()
+    );
     this.recalculateValidity();
   }
 
@@ -333,6 +335,31 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
    *  ```
    */
   private checkValidity(): boolean {
+    const validatorsValid = this.runValidators();
+
+    // If the control wraps nested form(s), include their validity
+    const hasNestedForms =
+      BaseForm.isFormLike(this._value) ||
+      (Array.isArray(this._value) &&
+        this._value.some((item) => BaseForm.isFormLike(item)));
+
+    if (hasNestedForms) {
+      this._contains_a_form = true;
+      return validatorsValid;
+    }
+
+    return validatorsValid;
+  }
+
+  /**
+   * Runs validators and normalizes the results into the invalids array.
+   */
+  private runValidators(): boolean {
+    if (!this._validators || this._validators.length === 0) {
+      this._invalids = [];
+      return true;
+    }
+
     this._invalids = this._validators.map((validator) => {
       const result = validator(this.value);
       const mutatedResult =
