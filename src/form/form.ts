@@ -1,4 +1,4 @@
-import {} from "../util";
+import { } from "../util";
 import type {
   FormControlMap,
   FormControlNonArrayPrimitiveMap,
@@ -177,6 +177,13 @@ export class Form<T> extends BaseForm<T, Form<T>> {
    */
   get invalids(): FormControl<any, T>[] {
     return this._invalids;
+  }
+
+  /**
+    * Gets whether the form passes all validation rules
+  */
+  public override get valid(): boolean {
+    return this._invalids.length <= 0 || this._flattenedControls?.every((c) => c.valid);
   }
 
   /**
