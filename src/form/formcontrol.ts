@@ -292,6 +292,8 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
       typeof this._value === "object" &&
       this._value !== null &&
       this._value instanceof Date === false &&
+      this._value instanceof File === false &&
+      this._value instanceof Blob === false &&
       this._value !== null &&
       !Array.isArray(this._value)
     ) {
