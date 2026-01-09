@@ -18,6 +18,7 @@ export namespace Validators {
    * - Empty string (after trim): invalid
    * - Empty array: invalid
    * - Empty object (no keys): invalid
+   * - File or Blob instances: valid (when present)
    * - All other values: valid
    * 
    * @example
@@ -28,6 +29,8 @@ export namespace Validators {
    * Validators.required([]) // false
    * Validators.required({}) // false
    * Validators.required({ name: 'John' }) // true
+   * Validators.required(new File(['content'], 'file.txt')) // true
+   * Validators.required(new Blob(['content'])) // true
    * ```
    */
   export function required<T>(value: T): AdvancedValidatorReturn {
@@ -48,6 +51,12 @@ export namespace Validators {
         valid: false,
         message: 'This field is required.'
       }
+    }
+    // File and Blob instances are valid when present (they don't have enumerable own properties)
+    if (value instanceof File || value instanceof Blob) {
+      return {
+        valid: true
+      };
     }
     if (typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
       const isValid = Object.keys(value).length > 0;
