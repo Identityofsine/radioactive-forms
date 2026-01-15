@@ -181,4 +181,93 @@ describe("Form - initial readOnly option", () => {
     assert.equal(parent.controls.mixedArray.value[0].readonly, false);
     assert.equal(parent.controls.mixedArray.value[1].readonly, false);
   });
+
+  it("propagates to deeply nested forms: form -> form -> forms[]", () => {
+    const grandChildren = [
+      formGroup({ x: 1 }, { readOnly: true }),
+      formGroup({ x: 2 }, { readOnly: false }),
+    ];
+
+    const middle = formGroup(
+      {
+        innerArray: grandChildren,
+      },
+      { readOnly: false }
+    );
+
+    const outer = new Form(
+      {
+        middle,
+      },
+      undefined,
+      undefined,
+      { readOnly: false }
+    );
+
+    // Sanity: initial explicit values exist deep
+    assert.equal(outer.readonly, false);
+    assert.equal(outer.controls.middle.value.readonly, false);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[0].readonly, true);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[1].readonly, false);
+
+    // Runtime: outer wins at all levels
+    outer.readonly = true;
+    assert.equal(outer.readonly, true);
+    assert.equal(outer.controls.middle.value.readonly, true);
+    assert.equal(outer.controls.middle.value.controls.innerArray.readonly, true);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[0].readonly, true);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[1].readonly, true);
+
+    outer.readonly = false;
+    assert.equal(outer.readonly, false);
+    assert.equal(outer.controls.middle.value.readonly, false);
+    assert.equal(outer.controls.middle.value.controls.innerArray.readonly, false);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[0].readonly, false);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[1].readonly, false);
+  });
+
+  it("propagates to deeply nested forms when outer starts readOnly: true (init respects explicit, runtime overrides)", () => {
+    const grandChildren = [
+      formGroup({ x: 1 }, { readOnly: true }),
+      formGroup({ x: 2 }, { readOnly: false }),
+    ];
+
+    const middle = formGroup(
+      {
+        innerArray: grandChildren,
+      },
+      { readOnly: false }
+    );
+
+    const outer = new Form(
+      {
+        middle,
+      },
+      undefined,
+      undefined,
+      { readOnly: true }
+    );
+
+    // Init: outer is readonly, but explicit nested values should not be overridden at construction
+    assert.equal(outer.readonly, true);
+    assert.equal(outer.controls.middle.readonly, false);
+    assert.equal(outer.controls.middle.value.readonly, false);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[0].readonly, true);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[1].readonly, false);
+
+    // Runtime: outer wins at all levels
+    outer.readonly = false;
+    assert.equal(outer.readonly, false);
+    assert.equal(outer.controls.middle.value.readonly, false);
+    assert.equal(outer.controls.middle.value.controls.innerArray.readonly, false);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[0].readonly, false);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[1].readonly, false);
+
+    outer.readonly = true;
+    assert.equal(outer.readonly, true);
+    assert.equal(outer.controls.middle.value.readonly, true);
+    assert.equal(outer.controls.middle.value.controls.innerArray.readonly, true);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[0].readonly, true);
+    assert.equal(outer.controls.middle.value.controls.innerArray.value[1].readonly, true);
+  });
 });

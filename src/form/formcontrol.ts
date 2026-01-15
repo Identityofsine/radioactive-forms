@@ -193,8 +193,8 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
         this._value = (this._value as unknown as any[])?.filter((item: unknown) => item && Form.isFormLike(item as unknown as Form<any>)) as T;
       } else if (Form.isFormLike(this._initialValue)) {
         // Restore initial form - handle factory function case
-        const initialValue = typeof this._initialValue === "function" 
-          ? (this._initialValue as () => Form<any>)() 
+        const initialValue = typeof this._initialValue === "function"
+          ? (this._initialValue as () => Form<any>)()
           : this._initialValue;
         this._value = initialValue as T;
         if (Form.isFormLike(this._value)) {
@@ -224,10 +224,6 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
    * @param isReadonly - True to make the control read-only, false otherwise
    */
   public set readonly(isReadonly: boolean) {
-    if (this._readonly === isReadonly) {
-      return;
-    }
-
     this._readonly = isReadonly;
 
     // Then propagate to nested forms

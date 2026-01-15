@@ -166,6 +166,179 @@ describe("Form Initialization & Type Safety", () => {
       expect((formRef as any)!.controls.mixedArray.value[1].readonly).toBe(false)
     );
   });
+
+  it("propagates to deeply nested forms: form -> form -> forms[] (React)", async () => {
+    const schema = {
+      middle: formGroup(
+        {
+          innerArray: [
+            formGroup({ x: 1 }, { readOnly: true }),
+            formGroup({ x: 2 }, { readOnly: false }),
+          ],
+        },
+        { readOnly: false }
+      ),
+    };
+
+    let formRef: Form<typeof schema> | undefined;
+
+    const Component = () => {
+      const { form } = useForm(schema, { readOnly: false }, []);
+      formRef = form as any;
+      return <></>;
+    };
+
+    render(<Component />);
+
+    await waitFor(() => expect(formRef).toBeDefined());
+
+    // Sanity: initial explicit values exist deep
+    await waitFor(() =>
+      expect((formRef as any)!.controls.middle.value.readonly).toBe(false)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[0].readonly
+      ).toBe(true)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[1].readonly
+      ).toBe(false)
+    );
+
+    // Runtime: outer wins at all levels
+    await act(async () => {
+      (formRef as any)!.readonly = true;
+    });
+
+    await waitFor(() => expect((formRef as any)!.readonly).toBe(true));
+    await waitFor(() =>
+      expect((formRef as any)!.controls.middle.value.readonly).toBe(true)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.middle.value.controls.innerArray.readonly).toBe(true)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[0].readonly
+      ).toBe(true)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[1].readonly
+      ).toBe(true)
+    );
+
+    await act(async () => {
+      (formRef as any)!.readonly = false;
+    });
+
+    await waitFor(() => expect((formRef as any)!.readonly).toBe(false));
+    await waitFor(() =>
+      expect((formRef as any)!.controls.middle.value.readonly).toBe(false)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.middle.value.controls.innerArray.readonly).toBe(false)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[0].readonly
+      ).toBe(false)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[1].readonly
+      ).toBe(false)
+    );
+  });
+
+  it("propagates to deeply nested forms when outer starts readOnly: true (React)", async () => {
+    const schema = {
+      middle: formGroup(
+        {
+          innerArray: [
+            formGroup({ x: 1 }, { readOnly: true }),
+            formGroup({ x: 2 }, { readOnly: false }),
+          ],
+        },
+        { readOnly: false }
+      ),
+    };
+
+    let formRef: Form<typeof schema> | undefined;
+
+    const Component = () => {
+      const { form } = useForm(schema, { readOnly: true }, []);
+      formRef = form as any;
+      return <></>;
+    };
+
+    render(<Component />);
+
+    await waitFor(() => expect(formRef).toBeDefined());
+    await waitFor(() => expect((formRef as any)!.readonly).toBe(true));
+
+    // Init: outer is readonly, but explicit nested values should not be overridden at construction
+    await waitFor(() =>
+      expect((formRef as any)!.controls.middle.value.readonly).toBe(false)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[0].readonly
+      ).toBe(true)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[1].readonly
+      ).toBe(false)
+    );
+
+    // Runtime: outer wins at all levels
+    await act(async () => {
+      (formRef as any)!.readonly = false;
+    });
+
+    await waitFor(() => expect((formRef as any)!.readonly).toBe(false));
+    await waitFor(() =>
+      expect((formRef as any)!.controls.middle.value.readonly).toBe(false)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.middle.value.controls.innerArray.readonly).toBe(false)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[0].readonly
+      ).toBe(false)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[1].readonly
+      ).toBe(false)
+    );
+
+    await act(async () => {
+      (formRef as any)!.readonly = true;
+    });
+
+    await waitFor(() => expect((formRef as any)!.readonly).toBe(true));
+    await waitFor(() =>
+      expect((formRef as any)!.controls.middle.value.readonly).toBe(true)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.middle.value.controls.innerArray.readonly).toBe(true)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[0].readonly
+      ).toBe(true)
+    );
+    await waitFor(() =>
+      expect(
+        (formRef as any)!.controls.middle.value.controls.innerArray.value[1].readonly
+      ).toBe(true)
+    );
+  });
 });
 
 // ============================================================================
