@@ -27,6 +27,10 @@ import type { FormOptions } from "../form";
  * ```
  */
 export function formGroup<T>(props: FormControlPrimitiveMap<T>): Form<T>;
+export function formGroup<T>(
+  props: FormControlPrimitiveMap<T>,
+  options?: FormOptions,
+): Form<T>;
 
 /**
  * Functional helper to create a Form instance from a non-array primitive control map.
@@ -36,6 +40,10 @@ export function formGroup<T>(props: FormControlPrimitiveMap<T>): Form<T>;
  * @returns A new Form instance
  */
 export function formGroup<T>(props: FormControlNonArrayPrimitiveMap<T>): Form<T>;
+export function formGroup<T>(
+  props: FormControlNonArrayPrimitiveMap<T>,
+  options?: FormOptions,
+): Form<T>;
 
 export function formGroup<T>(
   props: FormControlPrimitiveMap<T> | FormControlNonArrayPrimitiveMap<T>,
