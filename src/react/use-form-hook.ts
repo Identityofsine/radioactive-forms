@@ -5,7 +5,9 @@ import {
   FormControlPrimitiveMap,
 } from "../types/form.types";
 
-export type UseFormHookOptions<T> = {};
+export type UseFormHookOptions<T> = {
+  readOnly?: boolean;
+};
 
 export type UseFormHook<T> = (
   form: Form<T>,
@@ -27,9 +29,9 @@ export const useForm = <T>(
   const [form, setForm] = React.useState<Form<T>>();
 
   React.useEffect(() => {
-    const newForm = new Form<T>(formTemplate, setForm);
+    const newForm = new Form<T>(formTemplate, setForm, undefined, options);
     setForm(newForm);
-  }, [setForm, ...dependency]);
+  }, [setForm, options?.readOnly, ...dependency]);
 
   return {
     form,

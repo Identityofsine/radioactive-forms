@@ -18,6 +18,16 @@ type AcceptedControls<T> =
   | FormControlPrimitiveMap<T>
   | FormControlNonArrayPrimitiveMap<T>;
 
+export type FormOptions = {
+  /**
+   * If provided, sets the initial readonly state of the form.
+   *
+   * Important: this is treated as an explicit initialization value (even if false)
+   * so parent forms can respect "explicit from the getgo" semantics.
+   */
+  readOnly?: boolean;
+};
+
 /**
  * Represents a group of FormControls that work together to manage complex form data.
  * Form provides validation, state management, and React integration for multiple controls.
@@ -55,6 +65,15 @@ export class Form<T> extends BaseForm<T, Form<T>> {
   private readonly __primitiveControls: AcceptedControls<T>;
 
   /**
+   * Tracks whether this form's initial readOnly was explicitly provided.
+   * Used to decide whether parent form initialization should override this form.
+   *
+   * @private
+   * @readonly
+   */
+  private readonly __explicitReadOnly: boolean;
+
+  /**
    * Reference to the parent FormControl if this form is nested
    * @private
    */
@@ -87,7 +106,8 @@ export class Form<T> extends BaseForm<T, Form<T>> {
   constructor(
     controls: FormControlPrimitiveMap<T>,
     setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
-    parentControl?: FormControl<unknown, unknown>
+    parentControl?: FormControl<unknown, unknown>,
+    options?: FormOptions
   );
   /**
    * Creates a new Form instance with FormControlNonArrayPrimitiveMap configuration
@@ -96,16 +116,9 @@ export class Form<T> extends BaseForm<T, Form<T>> {
    */
   constructor(
     controls: FormControlNonArrayPrimitiveMap<T>,
-    setState?: React.Dispatch<React.SetStateAction<Form<T>>>
-  );
-  /**
-   * Creates a new Form instance with FormControlPrimitiveMap configuration
-   * @param controls - Primitive control configuration
-   * @param setState - React state setter function
-   */
-  constructor(
-    controls: FormControlPrimitiveMap<T>,
-    setState?: React.Dispatch<React.SetStateAction<Form<T>>>
+    setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
+    parentControl?: FormControl<unknown, unknown>,
+    options?: FormOptions
   );
   /**
    * Creates a new Form instance with FormControlMap configuration
@@ -114,18 +127,23 @@ export class Form<T> extends BaseForm<T, Form<T>> {
    */
   constructor(
     controls: FormControlMap<T>,
-    setState?: React.Dispatch<React.SetStateAction<Form<T>>>
+    setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
+    parentControl?: FormControl<unknown, unknown>,
+    options?: FormOptions
   );
   constructor(
     controls: AcceptedControls<T>,
     setState?: React.Dispatch<React.SetStateAction<Form<T>>>,
-    parentControl?: FormControl<unknown, unknown>
+    parentControl?: FormControl<unknown, unknown>,
+    options?: FormOptions
   ) {
     super(setState);
     if (parentControl) {
       this.__parentControl = parentControl;
     }
     this.__primitiveControls = controls;
+    const initialReadOnly = options?.readOnly ?? false;
+    this.__explicitReadOnly = options?.readOnly !== undefined;
     this._controls = createFormControls(controls, (updateAction) => {
       if (typeof updateAction === "function") {
         if (this._setState) {
@@ -160,9 +178,57 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     this._dirty = false;
     this._touched = false;
     this._valid = true;
-    this._readonly = false;
+    this._readonly = initialReadOnly;
+    this.initializeReadOnlyState(initialReadOnly);
     // Ensure initial validity reflects control state (including invalid defaults)
     this.internalUpdate();
+  }
+
+  /**
+   * Initializes readonly state without triggering propagation.
+   * Applies the parent override rules:
+   * - primitive controls always follow the parent's initial readonly
+   * - nested forms/arrays are only overridden if they did not explicitly set readOnly at construction
+   */
+  private initializeReadOnlyState(initialReadOnly: boolean): void {
+    const controls = this._flattenedControls || [];
+
+    for (const control of controls) {
+      const value: any = (control as any).value;
+
+      // Arrays that may contain Forms (form arrays)
+      if (Array.isArray(value) && value.some((item) => Form.isForm(item))) {
+        const forms = value.filter((item) => Form.isForm(item)) as Array<Form<any>>;
+        const anyExplicit = forms.some(
+          (f) => (f as any).__explicitReadOnly === true
+        );
+
+        if (!anyExplicit) {
+          // Override array control and all nested forms
+          Object.assign(control, { _readonly: initialReadOnly });
+          forms.forEach((f) =>
+            f.setStateWithoutPropagation(initialReadOnly, f.disabled)
+          );
+        }
+        continue;
+      }
+
+      // Nested single form
+      if (Form.isForm(value)) {
+        const isExplicit = (value as any).__explicitReadOnly === true;
+        if (!isExplicit) {
+          Object.assign(control, { _readonly: initialReadOnly });
+          (value as Form<any>).setStateWithoutPropagation(
+            initialReadOnly,
+            (value as Form<any>).disabled
+          );
+        }
+        continue;
+      }
+
+      // Primitive/non-form control
+      Object.assign(control, { _readonly: initialReadOnly });
+    }
   }
 
   /**

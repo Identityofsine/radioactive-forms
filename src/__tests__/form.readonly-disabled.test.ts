@@ -1,5 +1,6 @@
 import { assert, describe, it } from "vitest";
 import { Form } from "../form/form";
+import { formGroup } from "../form/functional";
 
 const GenericForm = () =>
   new Form({
@@ -66,5 +67,72 @@ describe("Form - readonly/disabled", () => {
 
     form.disabled = false;
     checkDisabled(form, false);
+  });
+});
+
+describe("Form - initial readOnly option", () => {
+  it("does not override nested forms that explicitly set readOnly (even when parent is false)", () => {
+    const complex = formGroup({ something: 1 }, { readOnly: true });
+
+    // Parent form default readOnly: false
+    const parent = new Form({
+      primitive1: 0,
+      complex,
+    });
+
+    assert.equal(parent.readonly, false);
+    assert.equal(parent.controls.primitive1.readonly, false);
+
+    // Nested form should keep its own explicit readOnly: true (not overridden to false)
+    assert.equal(parent.controls.complex.value.readonly, true);
+  });
+
+  it("overrides nested forms/arrays when readOnly was not explicitly set", () => {
+    // Explicit nested: should NOT be overridden
+    const complex = formGroup({ something: 1 }, { readOnly: true });
+
+    // Implicit nested: should be overridden
+    const complex2 = formGroup({ something2: 2 });
+
+    // Mixed explicit array: should NOT be overridden (keep [true, false])
+    const complex3 = [
+      formGroup({ something3: "a" }, { readOnly: true }),
+      formGroup({ something6: "b" }, { readOnly: false }),
+    ];
+
+    // Implicit array: should be overridden
+    const complex4 = [formGroup({ something4: "c" }), formGroup({ something5: "d" })];
+
+    const parent = new Form(
+      {
+        primitive1: 0,
+        primitive2: [0, []],
+        complex,
+        complex2,
+        complex3,
+        complex4,
+      },
+      undefined,
+      undefined,
+      { readOnly: true }
+    );
+
+    assert.equal(parent.readonly, true);
+    assert.equal(parent.controls.primitive1.readonly, true);
+    assert.equal(parent.controls.primitive2.readonly, true);
+
+    // complex should keep explicit readOnly: true
+    assert.equal(parent.controls.complex.value.readonly, true);
+
+    // complex2 should be overridden to true
+    assert.equal(parent.controls.complex2.value.readonly, true);
+
+    // mixed explicit array should NOT be overridden
+    assert.equal(parent.controls.complex3.value[0].readonly, true);
+    assert.equal(parent.controls.complex3.value[1].readonly, false);
+
+    // implicit array should be overridden
+    assert.equal(parent.controls.complex4.value[0].readonly, true);
+    assert.equal(parent.controls.complex4.value[1].readonly, true);
   });
 });

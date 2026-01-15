@@ -102,6 +102,7 @@ export function createFormControls<T>(
     } else if (BaseForm.isFormLike(control)) {
       // handle nested forms
       if (Form.isForm(control) && Form.needsHook(control)) {
+        const hasExplicitReadOnly = (control as any).__explicitReadOnly === true;
         const primitiveControls = (control as any).__primitiveControls as
           | FormControlPrimitiveMap<any>
           | FormControlNonArrayPrimitiveMap<any>;
@@ -112,7 +113,8 @@ export function createFormControls<T>(
             new Form(
               primitiveControls,
               undefined,
-              controls[key] as FormControl<any, any>
+              controls[key] as FormControl<any, any>,
+              hasExplicitReadOnly ? { readOnly: control.readonly } : undefined
             ),
           [],
           setState
@@ -134,7 +136,8 @@ export function createFormControls<T>(
                 : oldState;
             (controls[key] as FormControl<any, any>).value = value;
           },
-          controls[key] as FormControl<any, any>
+          controls[key] as FormControl<any, any>,
+          hasExplicitReadOnly ? { readOnly: control.readonly } : undefined
         );
         Object.assign(subNewForm, {
           _readonly: controls[key].readonly,
@@ -259,15 +262,23 @@ export function assignHooklessFormArray<T>(
         >) ?? rControl;
 
       if (BaseForm.needsHook(formInstance)) {
+        const hasExplicitReadOnly = (formInstance as any).__explicitReadOnly === true;
+        const desiredReadOnly = hasExplicitReadOnly
+          ? (formInstance as Form<any>).readonly
+          : control.readonly;
+
         const newForm = new Form<any>(
           (formInstance as any).__primitiveControls,
           setState,
-          rControl as FormControl<any, any>
+          rControl as FormControl<any, any>,
+          hasExplicitReadOnly ? { readOnly: (formInstance as Form<any>).readonly } : undefined
         );
+
+        // Apply desired readonly/disabled without propagation
+        newForm.setStateWithoutPropagation(desiredReadOnly, control.disabled);
 
         Object.assign(newForm, {
           _formId: formInstance.formId,
-          _readonly: control.readonly,
           _disabled: control.disabled,
         });
 
@@ -277,19 +288,28 @@ export function assignHooklessFormArray<T>(
           }
           Object.assign(newForm.controls?.[key], {
             _value: (formInstance?.controls?.[key] as any)?._value,
-            _readonly: control.readonly,
             _disabled: control.disabled,
           });
         }
 
         return newForm;
       } else {
+        const hasExplicitReadOnly = (formInstance as any).__explicitReadOnly === true;
+        const desiredReadOnly = hasExplicitReadOnly
+          ? (formInstance as Form<any>).readonly
+          : control.readonly;
+
         Object.assign(formInstance, {
           _setState: setState,
           _formId: formInstance.formId,
-          _readonly: control.readonly,
           _disabled: control.disabled,
         });
+
+        // Keep explicit-from-getgo readOnly if present; otherwise align with parent control
+        (formInstance as Form<any>).setStateWithoutPropagation(
+          desiredReadOnly,
+          control.disabled
+        );
         return formInstance;
       }
     }),

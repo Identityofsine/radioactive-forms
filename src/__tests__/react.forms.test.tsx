@@ -11,6 +11,7 @@ import { render, waitFor, act } from "@testing-library/react";
 import { useForm } from "../react/use-form-hook";
 import { FormGroupContext } from "../react/context/FormGroup";
 import { Form } from "../form";
+import { formGroup } from "../form/functional";
 import { BASE_SCHEMA, BaseFormComponent, ReactiveForm } from "../test/react-test-utils";
 
 // ============================================================================
@@ -61,6 +62,32 @@ describe("Form Initialization & Type Safety", () => {
     // Verify the form initialized message is rendered
     await waitFor(() =>
       expect(getByText("Form Initialized: Yes")).toBeDefined()
+    );
+  });
+
+  it("initializes useForm with readOnly and does not override nested explicit readOnly", async () => {
+    const schema = {
+      primitive1: 0,
+      // Explicit nested: should not be overridden by parent
+      nestedExplicit: formGroup({ a: 1 }, { readOnly: false }),
+    };
+
+    let formRef: Form<typeof schema> | undefined;
+
+    const Component = () => {
+      const { form } = useForm(schema, { readOnly: true }, []);
+      formRef = form as any;
+      return <></>;
+    };
+
+    render(<Component />);
+
+    await waitFor(() => expect(formRef).toBeDefined());
+    await waitFor(() => expect(formRef?.readonly).toBe(true));
+
+    // Parent readOnly true should not override nested explicit readOnly: false
+    await waitFor(() =>
+      expect((formRef as any)!.controls.nestedExplicit.value.readonly).toBe(false)
     );
   });
 });
