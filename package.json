@@ -1,6 +1,6 @@
 {
   "name": "@identityofsine/radioactive-forms",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "Powerful forms for React",
   "main": "src/index.ts",
   "scripts": {
