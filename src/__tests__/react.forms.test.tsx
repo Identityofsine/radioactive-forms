@@ -90,6 +90,82 @@ describe("Form Initialization & Type Safety", () => {
       expect((formRef as any)!.controls.nestedExplicit.value.readonly).toBe(false)
     );
   });
+
+  it("runtime parent readonly setter overrides nested explicit readOnly (including arrays)", async () => {
+    const schema = {
+      primitive1: 0,
+      nestedExplicitTrue: formGroup({ a: 1 }, { readOnly: true }),
+      nestedExplicitFalse: formGroup({ b: 2 }, { readOnly: false }),
+      mixedArray: [
+        formGroup({ c: 3 }, { readOnly: true }),
+        formGroup({ d: 4 }, { readOnly: false }),
+      ],
+    };
+
+    let formRef: Form<typeof schema> | undefined;
+
+    const Component = () => {
+      const { form } = useForm(schema, { readOnly: false }, []);
+      formRef = form as any;
+      return <></>;
+    };
+
+    render(<Component />);
+
+    await waitFor(() => expect(formRef).toBeDefined());
+    await waitFor(() => expect(formRef?.readonly).toBe(false));
+
+    // Ensure initial explicit values are present
+    await waitFor(() =>
+      expect((formRef as any)!.controls.nestedExplicitTrue.value.readonly).toBe(true)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.nestedExplicitFalse.value.readonly).toBe(false)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.mixedArray.value[0].readonly).toBe(true)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.mixedArray.value[1].readonly).toBe(false)
+    );
+
+    // Runtime override: parent wins everywhere
+    await act(async () => {
+      (formRef as any)!.readonly = true;
+    });
+
+    await waitFor(() => expect(formRef?.readonly).toBe(true));
+    await waitFor(() =>
+      expect((formRef as any)!.controls.nestedExplicitTrue.value.readonly).toBe(true)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.nestedExplicitFalse.value.readonly).toBe(true)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.mixedArray.value[0].readonly).toBe(true)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.mixedArray.value[1].readonly).toBe(true)
+    );
+
+    await act(async () => {
+      (formRef as any)!.readonly = false;
+    });
+
+    await waitFor(() => expect(formRef?.readonly).toBe(false));
+    await waitFor(() =>
+      expect((formRef as any)!.controls.nestedExplicitTrue.value.readonly).toBe(false)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.nestedExplicitFalse.value.readonly).toBe(false)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.mixedArray.value[0].readonly).toBe(false)
+    );
+    await waitFor(() =>
+      expect((formRef as any)!.controls.mixedArray.value[1].readonly).toBe(false)
+    );
+  });
 });
 
 // ============================================================================

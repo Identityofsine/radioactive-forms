@@ -135,4 +135,50 @@ describe("Form - initial readOnly option", () => {
     assert.equal(parent.controls.complex4.value[0].readonly, true);
     assert.equal(parent.controls.complex4.value[1].readonly, true);
   });
+
+  it("runtime parent readonly setter always overrides nested explicit readOnly", () => {
+    const nestedExplicitTrue = formGroup({ a: 1 }, { readOnly: true });
+    const nestedExplicitFalse = formGroup({ b: 2 }, { readOnly: false });
+    const mixedArray = [
+      formGroup({ c: 3 }, { readOnly: true }),
+      formGroup({ d: 4 }, { readOnly: false }),
+    ];
+
+    const parent = new Form(
+      {
+        primitive1: 0,
+        nestedExplicitTrue,
+        nestedExplicitFalse,
+        mixedArray,
+      },
+      undefined,
+      undefined,
+      { readOnly: false }
+    );
+
+    // Initial explicit values should be respected
+    assert.equal(parent.readonly, false);
+    assert.equal(parent.controls.primitive1.readonly, false);
+    assert.equal(parent.controls.nestedExplicitTrue.value.readonly, true);
+    assert.equal(parent.controls.nestedExplicitFalse.value.readonly, false);
+    assert.equal(parent.controls.mixedArray.value[0].readonly, true);
+    assert.equal(parent.controls.mixedArray.value[1].readonly, false);
+
+    // Runtime override: parent wins everywhere
+    parent.readonly = true;
+    assert.equal(parent.readonly, true);
+    assert.equal(parent.controls.primitive1.readonly, true);
+    assert.equal(parent.controls.nestedExplicitTrue.value.readonly, true);
+    assert.equal(parent.controls.nestedExplicitFalse.value.readonly, true);
+    assert.equal(parent.controls.mixedArray.value[0].readonly, true);
+    assert.equal(parent.controls.mixedArray.value[1].readonly, true);
+
+    parent.readonly = false;
+    assert.equal(parent.readonly, false);
+    assert.equal(parent.controls.primitive1.readonly, false);
+    assert.equal(parent.controls.nestedExplicitTrue.value.readonly, false);
+    assert.equal(parent.controls.nestedExplicitFalse.value.readonly, false);
+    assert.equal(parent.controls.mixedArray.value[0].readonly, false);
+    assert.equal(parent.controls.mixedArray.value[1].readonly, false);
+  });
 });
