@@ -152,15 +152,57 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
    * Resets the control to its initial state, including nested forms if present
    */
   public reset(): void {
-    if (this._contains_a_form) {
+    // Check if current value contains forms
+    const currentValueContainsForms =
+      BaseForm.isFormLike(this._value) ||
+      (Array.isArray(this._value) &&
+        this._value.some((item) => BaseForm.isFormLike(item)));
+
+    // Check if initial value contains forms
+    const initialValueContainsForms =
+      BaseForm.isFormLike(this._initialValue) ||
+      (Array.isArray(this._initialValue) &&
+        this._initialValue.some((item) => BaseForm.isFormLike(item)));
+
+    if (currentValueContainsForms) {
+      // Current value contains forms - reset the forms in place
       if (Array.isArray(this._value)) {
+        // For arrays containing forms, reset each form in the current array
         this._value.forEach((item) => {
-          item.reset();
+          if (Form.isFormLike(item)) {
+            item.reset();
+          }
         });
-      } else {
-        (this._value as Form<any>).reset();
+        // Clean up any null/undefined forms from the array
+        this._value = this._value?.filter((item) => item && Form.isFormLike(item)) as T;
+      } else if (Form.isFormLike(this._value)) {
+        // Single nested form - call reset on the existing form instance
+        (this._value as unknown as Form<any>).reset();
+      }
+    } else if (initialValueContainsForms) {
+      // Initial value contains forms but current doesn't - restore initial value
+      // This handles the case where forms were removed/replaced
+      if (Array.isArray(this._initialValue)) {
+        // Restore initial array and reset forms in it
+        this._value = this._initialValue;
+        (this._value as unknown as any[]).forEach((item: unknown) => {
+          if (Form.isFormLike(item)) {
+            (item as unknown as Form<any>).reset();
+          }
+        });
+        this._value = (this._value as unknown as any[])?.filter((item: unknown) => item && Form.isFormLike(item as unknown as Form<any>)) as T;
+      } else if (Form.isFormLike(this._initialValue)) {
+        // Restore initial form - handle factory function case
+        const initialValue = typeof this._initialValue === "function" 
+          ? (this._initialValue as () => Form<any>)() 
+          : this._initialValue;
+        this._value = initialValue as T;
+        if (Form.isFormLike(this._value)) {
+          (this._value as unknown as Form<any>).reset();
+        }
       }
     } else {
+      // Normal value (not containing forms) - reset to initial value
       this._value = this._initialValue;
     }
     this._dirty = false;
@@ -345,10 +387,8 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
       (Array.isArray(this._value) &&
         this._value.some((item) => BaseForm.isFormLike(item)));
 
-    if (hasNestedForms) {
-      this._contains_a_form = true;
-      return validatorsValid;
-    }
+    // Always update _contains_a_form based on current value state
+    this._contains_a_form = hasNestedForms;
 
     return validatorsValid;
   }

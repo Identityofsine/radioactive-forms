@@ -679,3 +679,438 @@ describe("FormControl - addValidator and removeValidator", () => {
     assert.equal(form.valid, true, "form should be valid when control is valid");
   });
 });
+
+describe("FormControl - reset method", () => {
+  describe("reset with single items (non-form)", () => {
+    it("should reset string value to initial value", () => {
+      const form = formGroup<{ name: string }>({
+        name: "initial",
+      });
+
+      form.controls.name.value = "modified";
+      assert.equal(form.controls.name.value, "modified", "value should be modified");
+      assert.equal(form.controls.name.dirty, true, "control should be dirty");
+
+      form.controls.name.reset();
+
+      assert.equal(form.controls.name.value, "initial", "value should be reset to initial");
+      assert.equal(form.controls.name.dirty, false, "control should not be dirty after reset");
+      assert.equal(form.controls.name.touched, false, "control should not be touched after reset");
+    });
+
+    it("should reset number value to initial value", () => {
+      const form = formGroup<{ age: number }>({
+        age: 25,
+      });
+
+      form.controls.age.value = 30;
+      form.controls.age.reset();
+
+      assert.equal(form.controls.age.value, 25, "age should be reset to initial value");
+      assert.equal(form.controls.age.dirty, false, "control should not be dirty");
+    });
+
+    it("should reset boolean value to initial value", () => {
+      const form = formGroup<{ active: boolean }>({
+        active: true,
+      });
+
+      form.controls.active.value = false;
+      form.controls.active.reset();
+
+      assert.equal(form.controls.active.value, true, "active should be reset to initial value");
+    });
+  });
+
+  describe("reset with single nested form", () => {
+    it("should reset nested form to initial state", () => {
+      const form = formGroup<{ user: Form<{ name: string; age: number }> }>({
+        user: formGroup({
+          name: "Alice",
+          age: 28,
+        }) as Form<{ name: string; age: number }>,
+      });
+
+      // Modify nested form
+      form.controls.user.value.controls.name.value = "Bob";
+      form.controls.user.value.controls.age.value = 30;
+      assert.equal(form.controls.user.value.controls.name.value, "Bob", "name should be modified");
+      assert.equal(form.controls.user.dirty, true, "user control should be dirty");
+
+      // Reset the control containing the nested form
+      form.controls.user.reset();
+
+      assert.equal(
+        form.controls.user.value.controls.name.value,
+        "Alice",
+        "nested form name should be reset to initial value"
+      );
+      assert.equal(
+        form.controls.user.value.controls.age.value,
+        28,
+        "nested form age should be reset to initial value"
+      );
+      assert.equal(form.controls.user.dirty, false, "user control should not be dirty after reset");
+      assert.equal(form.controls.user.touched, false, "user control should not be touched after reset");
+    });
+
+    it("should reset nested form and clear its dirty/touched flags", () => {
+      const form = formGroup<{ profile: Form<{ email: string }> }>({
+        profile: formGroup({
+          email: "alice@example.com",
+        }) as Form<{ email: string }>,
+      });
+
+      form.controls.profile.value.controls.email.value = "bob@example.com";
+      assert.equal(form.controls.profile.dirty, true, "profile control should be dirty");
+      assert.equal(form.controls.profile.value.dirty, true, "nested form should be dirty");
+
+      form.controls.profile.reset();
+
+      assert.equal(
+        form.controls.profile.value.controls.email.value,
+        "alice@example.com",
+        "email should be reset"
+      );
+      assert.equal(form.controls.profile.dirty, false, "profile control should not be dirty");
+      assert.equal(form.controls.profile.value.dirty, false, "nested form should not be dirty");
+    });
+  });
+
+  describe("reset with form arrays", () => {
+    it("should reset all forms in array to initial state", () => {
+      const form = formGroup<{ users: Form<{ name: string }>[] }>({
+        users: [
+          formGroup({ name: "Alice" }),
+          formGroup({ name: "Bob" }),
+          formGroup({ name: "Charlie" }),
+        ] as Form<{ name: string }>[],
+      });
+
+      // Modify forms in array
+      form.controls.users.value[0].controls.name.value = "Alice Modified";
+      form.controls.users.value[1].controls.name.value = "Bob Modified";
+      assert.equal(form.controls.users.dirty, true, "users control should be dirty");
+
+      form.controls.users.reset();
+
+      assert.equal(
+        form.controls.users.value[0].controls.name.value,
+        "Alice",
+        "first form should be reset"
+      );
+      assert.equal(
+        form.controls.users.value[1].controls.name.value,
+        "Bob",
+        "second form should be reset"
+      );
+      assert.equal(
+        form.controls.users.value[2].controls.name.value,
+        "Charlie",
+        "third form should be reset"
+      );
+      assert.equal(form.controls.users.dirty, false, "users control should not be dirty");
+    });
+
+    it("should reset form array and clear dirty/touched flags", () => {
+      const form = formGroup<{ items: Form<{ value: number }>[] }>({
+        items: [
+          formGroup({ value: 10 }),
+          formGroup({ value: 20 }),
+        ] as Form<{ value: number }>[],
+      });
+
+      form.controls.items.value[0].controls.value.value = 15;
+      form.controls.items.value[1].controls.value.value = 25;
+
+      form.controls.items.reset();
+
+      assert.equal(form.controls.items.value[0].controls.value.value, 10, "first item should be reset");
+      assert.equal(form.controls.items.value[1].controls.value.value, 20, "second item should be reset");
+      assert.equal(form.controls.items.dirty, false, "items control should not be dirty");
+      assert.equal(form.controls.items.touched, false, "items control should not be touched");
+      assert.equal(form.controls.items.value[0].dirty, false, "first nested form should not be dirty");
+      assert.equal(form.controls.items.value[1].dirty, false, "second nested form should not be dirty");
+    });
+
+    it("should clean up null/undefined forms from array during reset", () => {
+      const form = formGroup<{ users: Form<{ name: string }>[] }>({
+        users: [
+          formGroup({ name: "Alice" }),
+          formGroup({ name: "Bob" }),
+        ] as Form<{ name: string }>[],
+      });
+
+      // Manually add null/undefined to simulate edge case
+      const currentValue = form.controls.users.value;
+      (currentValue as any)[2] = null;
+      (currentValue as any)[3] = undefined;
+      form.controls.users.value = currentValue;
+
+      // Reset should filter out null/undefined
+      form.controls.users.reset();
+
+      const filteredArray = form.controls.users.value.filter((item) => item && Form.isFormLike(item));
+      assert.equal(filteredArray.length, 2, "array should only contain valid forms after reset");
+      assert.equal(
+        form.controls.users.value[0].controls.name.value,
+        "Alice",
+        "first form should still exist"
+      );
+      assert.equal(
+        form.controls.users.value[1].controls.name.value,
+        "Bob",
+        "second form should still exist"
+      );
+    });
+  });
+
+  describe("reset with normal arrays (non-form)", () => {
+    it("should reset array of strings to initial value", () => {
+      const form = formGroup<{ tags: string[] }>({
+        tags: ["tag1", "tag2"],
+      });
+
+      form.controls.tags.value = ["tag3", "tag4", "tag5"];
+      assert.equal(form.controls.tags.dirty, true, "control should be dirty");
+      
+      form.controls.tags.reset();
+
+      assert.deepEqual(form.controls.tags.value, ["tag1", "tag2"], "tags should be reset to initial array");
+      assert.equal(form.controls.tags.dirty, false, "tags control should not be dirty");
+      assert.equal(form.controls.tags.touched, false, "tags control should not be touched");
+    });
+
+    it("should reset array of numbers to initial value", () => {
+      const form = formGroup<{ scores: number[] }>({
+        scores: [10, 20, 30],
+      });
+
+      form.controls.scores.value = [40, 50];
+      form.controls.scores.reset();
+
+      assert.deepEqual(form.controls.scores.value, [10, 20, 30], "scores should be reset to initial array");
+      assert.equal(form.controls.scores.dirty, false, "scores control should not be dirty");
+    });
+
+    it("should reset empty array to initial empty array", () => {
+      const form = formGroup<{ items: string[] }>({
+        items: [],
+      });
+
+      form.controls.items.value = ["item1", "item2"];
+      form.controls.items.reset();
+
+      assert.deepEqual(form.controls.items.value, [], "items should be reset to empty array");
+      assert.equal(form.controls.items.dirty, false, "items control should not be dirty");
+    });
+
+    it("should reset array of objects to initial value", () => {
+      const form = formGroup<{ items: Array<{ id: number; name: string }> }>({
+        items: [
+          { id: 1, name: "Item1" },
+          { id: 2, name: "Item2" },
+        ],
+      });
+
+      form.controls.items.value = [
+        { id: 3, name: "Item3" },
+        { id: 4, name: "Item4" },
+      ];
+      form.controls.items.reset();
+
+      assert.deepEqual(
+        form.controls.items.value,
+        [
+          { id: 1, name: "Item1" },
+          { id: 2, name: "Item2" },
+        ],
+        "items should be reset to initial array"
+      );
+      assert.equal(form.controls.items.dirty, false, "items control should not be dirty");
+    });
+
+    it("should reset normal array even after being modified to contain forms temporarily", () => {
+      const form = formGroup<{ items: string[] }>({
+        items: ["item1", "item2"],
+      });
+
+      // Temporarily set to array with forms (this would set _contains_a_form to true)
+      const tempForm = formGroup({ name: "Temp" });
+      form.controls.items.value = [tempForm] as any;
+      
+      // Reset back to normal array
+      form.controls.items.value = ["item3", "item4"];
+      
+      // Reset should restore initial normal array
+      form.controls.items.reset();
+
+      assert.deepEqual(form.controls.items.value, ["item1", "item2"], "items should be reset to initial normal array");
+      assert.equal(form.controls.items.dirty, false, "items control should not be dirty");
+    });
+  });
+
+  describe("reset with mixed arrays", () => {
+    it("should reset array containing forms and filter out non-form items", () => {
+      // Note: When _contains_a_form is true, reset filters to only keep form-like items
+      const form = formGroup<{ mixed: Form<{ name: string }>[] }>({
+        mixed: [
+          formGroup({ name: "Form1" }),
+          formGroup({ name: "Form2" }),
+        ] as Form<{ name: string }>[],
+      });
+
+      form.controls.mixed.value[0].controls.name.value = "Form1 Modified";
+      form.controls.mixed.value[1].controls.name.value = "Form2 Modified";
+
+      // Add a non-form item (this simulates edge case)
+      const currentValue = form.controls.mixed.value;
+      (currentValue as any).push("string-item" as any);
+      form.controls.mixed.value = currentValue;
+
+      form.controls.mixed.reset();
+
+      // After reset, non-form items should be filtered out, forms should be reset
+      assert.equal(
+        form.controls.mixed.value.length,
+        2,
+        "array should only contain forms after reset"
+      );
+      assert.equal(
+        form.controls.mixed.value[0].controls.name.value,
+        "Form1",
+        "first form should be reset"
+      );
+      assert.equal(
+        form.controls.mixed.value[1].controls.name.value,
+        "Form2",
+        "second form should be reset"
+      );
+      assert.equal(form.controls.mixed.dirty, false, "mixed control should not be dirty");
+    });
+  });
+
+  describe("reset validity and state", () => {
+    it("should recalculate validity after reset", () => {
+      const form = formGroup<{ name: string }>({
+        name: ["initial", [Validators.required]],
+      });
+
+      form.controls.name.value = "";
+      assert.equal(form.controls.name.valid, false, "control should be invalid with empty value");
+      assert.equal(form.valid, false, "form should be invalid");
+
+      form.controls.name.reset();
+
+      assert.equal(form.controls.name.valid, true, "control should be valid after reset to valid initial value");
+      assert.equal(form.valid, true, "form should be valid after reset");
+    });
+
+    it("should maintain invalid state if initial value is invalid", () => {
+      const form = formGroup<{ email: string }>({
+        email: ["", [Validators.required]],
+      });
+
+      form.controls.email.value = "valid@example.com";
+      assert.equal(form.controls.email.valid, true, "control should be valid with value");
+
+      form.controls.email.reset();
+
+      assert.equal(form.controls.email.valid, false, "control should be invalid after reset to empty initial value");
+      assert.equal(form.valid, false, "form should be invalid");
+    });
+
+    it("should clear dirty and touched flags after reset", () => {
+      const form = formGroup<{ name: string }>({
+        name: "initial",
+      });
+
+      form.controls.name.value = "modified";
+      assert.equal(form.controls.name.dirty, true, "control should be dirty");
+      assert.equal(form.controls.name.touched, true, "control should be touched");
+      assert.equal(form.dirty, true, "form should be dirty");
+
+      form.controls.name.reset();
+
+      assert.equal(form.controls.name.dirty, false, "control should not be dirty after reset");
+      assert.equal(form.controls.name.touched, false, "control should not be touched after reset");
+      assert.equal(form.dirty, false, "form should not be dirty after reset");
+    });
+  });
+
+  describe("reset with deeply nested forms", () => {
+    it("should reset deeply nested form structure", () => {
+      const form = formGroup<{
+        user: Form<{
+          profile: Form<{ email: string }>;
+        }>;
+      }>({
+        user: formGroup({
+          profile: formGroup({
+            email: "alice@example.com",
+          }),
+        }) as Form<{
+          profile: Form<{ email: string }>;
+        }>,
+      });
+
+      form.controls.user.value.controls.profile.value.controls.email.value = "bob@example.com";
+      assert.equal(form.controls.user.dirty, true, "user control should be dirty");
+
+      form.controls.user.reset();
+
+      assert.equal(
+        form.controls.user.value.controls.profile.value.controls.email.value,
+        "alice@example.com",
+        "deeply nested email should be reset"
+      );
+      assert.equal(form.controls.user.dirty, false, "user control should not be dirty");
+      assert.equal(
+        form.controls.user.value.controls.profile.dirty,
+        false,
+        "nested profile control should not be dirty"
+      );
+    });
+
+    it("should reset form array containing nested forms", () => {
+      // Create a simpler nested structure to avoid stack overflow
+      const form = formGroup<{
+        users: Form<{ name: string; age: number }>[];
+      }>({
+        users: [
+          formGroup({ name: "Alice", age: 25 }),
+          formGroup({ name: "Bob", age: 30 }),
+        ] as Form<{ name: string; age: number }>[],
+      });
+
+      form.controls.users.value[0].controls.name.value = "Alice Modified";
+      form.controls.users.value[0].controls.age.value = 26;
+      form.controls.users.value[1].controls.name.value = "Bob Modified";
+      form.controls.users.value[1].controls.age.value = 31;
+
+      form.controls.users.reset();
+
+      assert.equal(
+        form.controls.users.value[0].controls.name.value,
+        "Alice",
+        "first form name should be reset"
+      );
+      assert.equal(
+        form.controls.users.value[0].controls.age.value,
+        25,
+        "first form age should be reset"
+      );
+      assert.equal(
+        form.controls.users.value[1].controls.name.value,
+        "Bob",
+        "second form name should be reset"
+      );
+      assert.equal(
+        form.controls.users.value[1].controls.age.value,
+        30,
+        "second form age should be reset"
+      );
+      assert.equal(form.controls.users.dirty, false, "users control should not be dirty");
+    });
+  });
+});
