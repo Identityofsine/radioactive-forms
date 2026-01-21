@@ -219,6 +219,21 @@ export abstract class BaseForm<T, Z extends BaseForm<T> = any>
   }
 
   /**
+   * Sets readonly/disabled state on form and controls without triggering propagation.
+   * Used internally when assigning forms to arrays to avoid callstack issues.
+   * @param readonly - The readonly state to set
+   * @param disabled - The disabled state to set
+   * @internal
+   */
+  public setStateWithoutPropagation(
+    readonly: boolean,
+    disabled: boolean
+  ): void {
+    this._readonly = readonly;
+    this._disabled = disabled;
+  }
+
+  /**
    * Partially updates the control's value
    * @param newValue - Partial value to merge with current value
    * @param opts - Options for the patch operation

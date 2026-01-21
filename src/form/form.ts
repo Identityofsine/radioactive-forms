@@ -26,6 +26,15 @@ export type FormOptions = {
    * so parent forms can respect "explicit from the getgo" semantics.
    */
   readOnly?: boolean;
+
+  /**
+   * If true, the initial readonly value is treated as authoritative and is applied
+   * to all nested forms/arrays regardless of whether they explicitly set readOnly.
+   *
+   * This only impacts constructor-time initialization. Runtime `form.readonly = ...`
+   * already overrides everything.
+   */
+  forceReadOnly?: boolean;
 };
 
 /**
@@ -215,19 +224,18 @@ export class Form<T> extends BaseForm<T, Form<T>> {
 
       // Nested single form
       if (Form.isForm(value)) {
-        const isExplicit = (value as any).__explicitReadOnly === true;
-        if (!isExplicit) {
-          Object.assign(control, { _readonly: initialReadOnly });
-          (value as Form<any>).setStateWithoutPropagation(
+        const nestedForm = value as Form<any>;
+        if ((nestedForm as any).__explicitReadOnly !== true) {
+          // Override only if not explicitly set
+          nestedForm.setStateWithoutPropagation(
             initialReadOnly,
-            (value as Form<any>).disabled
+            nestedForm.disabled
           );
         }
         continue;
       }
 
-      // Primitive/non-form control
-      Object.assign(control, { _readonly: initialReadOnly });
+      control.setStateWithoutPropagation(initialReadOnly, control.disabled);
     }
   }
 
@@ -378,13 +386,9 @@ export class Form<T> extends BaseForm<T, Form<T>> {
     readonly: boolean,
     disabled: boolean
   ): void {
-    this._readonly = readonly;
-    this._disabled = disabled;
+    super.setStateWithoutPropagation(readonly, disabled);
     this._flattenedControls.forEach((control) => {
-      Object.assign(control, {
-        _readonly: readonly,
-        _disabled: disabled,
-      });
+      control.setStateWithoutPropagation(readonly, disabled);
     });
   }
 

@@ -439,8 +439,11 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
   }): void {
     const markAsDirty = args?.markAsDirty ?? true;
     this._value = value;
-    this.handleNewFormObject();
     this.handleNewArrayObject();
+    const nForm = this.handleNewFormObject(this._value);
+    if (nForm) {
+      this._value = nForm;
+    }
     // TODO pass in reevaluater for nested forms
     if (markAsDirty) {
       this._dirty = true;
@@ -463,22 +466,37 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
 
     this._value = new Proxy(this._value, {
       set: (target, property, newValue) => {
+
+        const assignTargetValue = (setter: (obj: any) => void) => {
+          let hookedForm = newValue;
+          if (Form.isForm(newValue) && BaseForm.needsHook(newValue)) {
+            const nForm = this.handleNewFormObject(newValue, true);
+            if (nForm) {
+              hookedForm = nForm;
+            }
+          }
+          setter(hookedForm);
+          this.internalUpdate(this._value);
+          this.propagate(this.clone());
+        }
+
         const index = Number(property);
         if (!isNaN(index)) {
           const oldValue = target[index];
           if (oldValue !== newValue) {
-            target[index] = newValue;
-            this.internalUpdate(this._value);
-            this.propagate(this.clone());
+            assignTargetValue((obj) => {
+              target[index] = obj;
+            })
           }
           return true;
         }
+
         // Handle other properties like 'length'
         if (property === "length") {
           if (target.length !== (newValue as number)) {
-            (target as any)[property] = newValue;
-            this.internalUpdate(this._value);
-            this.propagate(this.clone());
+            assignTargetValue(() => {
+              target[property] = newValue;
+            });
             return true;
           }
           (target as any)[property] = newValue;
@@ -494,10 +512,9 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
    * Handles nested Form objects by setting up proper state hooks
    * @private
    */
-  private handleNewFormObject(): void {
-    const currentValue = this._value;
+  private handleNewFormObject(currentValue: unknown, forArray: boolean = false) {
     if (!(Array.isArray(currentValue) || BaseForm.isFormLike(currentValue))) {
-      return;
+      return undefined;
     }
     this._contains_a_form = true;
     // Array of forms: only rehook if any child needs a hook
@@ -512,20 +529,34 @@ export class FormControl<T, O> extends BaseForm<T, Form<O>> {
           this._versionRef?.current as RefOrFactory<FormControl<any, O>>
         );
       }
-      return;
+      return undefined;
     }
     // Single nested form
     if (Form.isForm(currentValue) && BaseForm.needsHook(currentValue)) {
       const primitiveControls = (currentValue as any).__primitiveControls;
-      const nForm = new Form(primitiveControls, (oldState) => {
-        const oldFormCached = this.value as unknown as Form<any>;
-        const val: Form<any> =
-          typeof oldState === "function" ? oldState(oldFormCached) : oldState;
-        this.value = val as unknown as T;
-      }) as unknown as T;
+      let nForm: T | undefined = undefined;
+      if (forArray && Array.isArray(this._value)) {
+        const cpy = this._value.slice();
+        cpy.push(
+          currentValue
+        );
+        assignHooklessFormArray(
+          cpy,
+          this._versionRef?.current as RefOrFactory<FormControl<any, O>>
+        );
+        nForm = cpy.at(-1);
+      } else {
+        nForm = new Form(primitiveControls, (oldState) => {
+          const oldFormCached = this.value as unknown as Form<any>;
+          const val: Form<any> =
+            typeof oldState === "function" ? oldState(oldFormCached) : oldState;
+          this.value = val as unknown as T;
+        }) as unknown as T;
+      }
       (nForm as Form<any>).setStateWithoutPropagation(this._readonly, this._disabled);
-      this._value = nForm;
+      return nForm;
     }
+    return undefined;
   }
 
   /**

@@ -224,99 +224,152 @@ export function assignHooklessFormArray<T>(
   if (!rControl) {
     return;
   }
+
   rControl.patchValue(
-    (arr as Array<Form<any>>).map((formInstance) => {
-      const setState = (oldState: any) => {
-        // get the newest control reference
-        const control =
-          ((rControl as any)?._versionRef?.current?.current as FormControl<
-            Array<Form<any>>,
-            any
-          >) ?? rControl;
-
-        if (!Array.isArray(control.value)) {
-          return;
-        }
-        const index = (control.value as Array<Form<T>>)?.findIndex(
-          (f) => f?.formId === formInstance.formId
-        );
-
-        const oldFormCached = () => (control.value as Array<Form<T>>)[index];
-        const value: Form<T> =
-          typeof oldState === "function" ? oldState(oldFormCached()) : oldState;
-
-        const currentArray = control.value as Array<Form<any>>;
-        const nextArray = currentArray.slice();
-        if (index === -1) {
-          // this is pretty much impossible.
-        } else {
-          nextArray[index] = value; // preserve instance; only replace changed slot
-        }
-        control.patchValue(nextArray);
-      };
-
-      const control =
-        ((rControl as any)?._versionRef?.current?.current as FormControl<
-          Array<Form<any>>,
-          any
-        >) ?? rControl;
-
-      if (BaseForm.needsHook(formInstance)) {
-        const hasExplicitReadOnly = (formInstance as any).__explicitReadOnly === true;
-        const desiredReadOnly = hasExplicitReadOnly
-          ? (formInstance as Form<any>).readonly
-          : control.readonly;
-
-        const newForm = new Form<any>(
-          (formInstance as any).__primitiveControls,
-          setState,
-          rControl as FormControl<any, any>,
-          hasExplicitReadOnly ? { readOnly: (formInstance as Form<any>).readonly } : undefined
-        );
-
-        // Apply desired readonly/disabled without propagation
-        newForm.setStateWithoutPropagation(desiredReadOnly, control.disabled);
-
-        Object.assign(newForm, {
-          _formId: formInstance.formId,
-          _disabled: control.disabled,
-        });
-
-        for (const key in formInstance.controls) {
-          if (newForm.controls?.[key] === undefined) {
-            continue;
-          }
-          Object.assign(newForm.controls?.[key], {
-            _value: (formInstance?.controls?.[key] as any)?._value,
-            _disabled: control.disabled,
-          });
-        }
-
-        return newForm;
-      } else {
-        const hasExplicitReadOnly = (formInstance as any).__explicitReadOnly === true;
-        const desiredReadOnly = hasExplicitReadOnly
-          ? (formInstance as Form<any>).readonly
-          : control.readonly;
-
-        Object.assign(formInstance, {
-          _setState: setState,
-          _formId: formInstance.formId,
-          _disabled: control.disabled,
-        });
-
-        // Keep explicit-from-getgo readOnly if present; otherwise align with parent control
-        (formInstance as Form<any>).setStateWithoutPropagation(
-          desiredReadOnly,
-          control.disabled
-        );
-        return formInstance;
-      }
-    }),
+    (arr as Array<Form<any>>).map((formInstance) => hooklessFormLogic<T>(formInstance, controlFactory as RefOrFactory<FormControl<Form<T>[], any>>),
+    ),
     {
       stateless: true,
     }
-  );
+  )
+}
+
+export function assignHooklessForm<T>(
+  formInstance: Form<T>,
+  controlFactory: RefOrFactory<FormControl<Form<T> | Form<T>[], any>>
+): void {
+
+  const rControl = resolveRefOrFactory(controlFactory);
+  if (!rControl) {
+    return;
+  }
+
+  rControl.patchValue(
+    hooklessFormLogic<T>(formInstance, controlFactory as RefOrFactory<FormControl<Form<T>[], any>>),
+    {
+      stateless: true,
+    }
+  )
+}
+
+function hooklessFormLogic<T>(
+  formInstance: Form<T>,
+  controlFactory: RefOrFactory<FormControl<Form<T>[], any>>
+) {
+
+
+  const rControl = resolveRefOrFactory(controlFactory);
+  if (!rControl) {
+    return formInstance;
+  }
+
+  const setState = (oldState: any) => {
+    // get the newest control reference
+    const control =
+      ((rControl as any)?._versionRef?.current?.current as FormControl<
+        Array<Form<any>>,
+        any
+      >) ?? rControl;
+
+    if (!Array.isArray(control.value)) {
+      return;
+    }
+    const index = (control.value as Array<Form<T>>)?.findIndex(
+      (f) => f?.formId === formInstance.formId
+    );
+
+    const oldFormCached = () => (control.value as Array<Form<T>>)[index];
+    const value: Form<T> =
+      typeof oldState === "function" ? oldState(oldFormCached()) : oldState;
+
+    const currentArray = control.value as Array<Form<any>>;
+    const nextArray = currentArray.slice();
+    if (index === -1) {
+      // this is pretty much impossible.
+    } else {
+      nextArray[index] = value; // preserve instance; only replace changed slot
+    }
+    control.patchValue(nextArray);
+  };
+
+  const control =
+    ((rControl as any)?._versionRef?.current?.current as FormControl<
+      Array<Form<any>>,
+      any
+    >) ?? rControl;
+
+  if (BaseForm.needsHook(formInstance)) {
+    const hasExplicitReadOnly = (formInstance as any).__explicitReadOnly === true;
+    const desiredReadOnly = hasExplicitReadOnly
+      ? (formInstance as Form<any>).readonly
+      : control.readonly;
+
+    const newForm = new Form<any>(
+      (formInstance as any).__primitiveControls,
+      setState,
+      rControl as FormControl<any, any>,
+      hasExplicitReadOnly ? { readOnly: (formInstance as Form<any>).readonly } : undefined
+    );
+
+    // Apply desired readonly/disabled without propagation
+    newForm.setStateWithoutPropagation(desiredReadOnly, control.disabled);
+
+    Object.assign(newForm, {
+      _formId: formInstance.formId,
+      _disabled: control.disabled,
+    });
+
+    for (const key in formInstance.controls) {
+      if (newForm.controls?.[key] === undefined) {
+        continue;
+      }
+      Object.assign(newForm.controls?.[key], {
+        _value: (formInstance?.controls?.[key] as any)?._value,
+        _disabled: control.disabled,
+      });
+
+      // Recursively assign hooks to nested arrays of forms
+      const controlValue = (formInstance?.controls?.[key] as any)?._value;
+      if (Array.isArray(controlValue) && controlValue.some((item) => Form.isForm(item))) {
+        assignHooklessFormArray(
+          controlValue.filter((item): item is Form<any> => Form.isForm(item)),
+          { current: newForm.controls[key] as FormControl<any, any> }
+        );
+      }
+    }
+
+    return newForm;
+  } else {
+    const hasExplicitReadOnly = (formInstance as any).__explicitReadOnly === true;
+    const desiredReadOnly = hasExplicitReadOnly
+      ? (formInstance as Form<any>).readonly
+      : control.readonly;
+
+    Object.assign(formInstance, {
+      _setState: setState,
+      _formId: formInstance.formId,
+      _disabled: control.disabled,
+    });
+
+    // Keep explicit-from-getgo readOnly if present; otherwise align with parent control
+    (formInstance as Form<any>).setStateWithoutPropagation(
+      desiredReadOnly,
+      control.disabled
+    );
+
+    // Recursively assign hooks to nested arrays of forms
+    for (const key in formInstance.controls) {
+      const controlValue = (formInstance.controls[key] as any)?.value;
+      if (Array.isArray(controlValue) && controlValue.some((item) => Form.isForm(item))) {
+        assignHooklessFormArray(
+          controlValue.filter((item): item is Form<any> => Form.isForm(item)),
+          { current: formInstance.controls[key] as FormControl<any, any> }
+        );
+      }
+    }
+
+    return formInstance;
+  }
 }
 
 /**

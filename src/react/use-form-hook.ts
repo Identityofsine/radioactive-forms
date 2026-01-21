@@ -7,6 +7,7 @@ import {
 
 export type UseFormHookOptions<T> = {
   readOnly?: boolean;
+  forceReadOnly?: boolean;
 };
 
 export type UseFormHook<T> = (
@@ -31,7 +32,7 @@ export const useForm = <T>(
   React.useEffect(() => {
     const newForm = new Form<T>(formTemplate, setForm, undefined, options);
     setForm(newForm);
-  }, [setForm, options?.readOnly, ...dependency]);
+  }, [setForm, options?.readOnly, options?.forceReadOnly, ...dependency]);
 
   return {
     form,
