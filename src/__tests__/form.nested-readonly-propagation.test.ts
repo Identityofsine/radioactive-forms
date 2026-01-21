@@ -323,22 +323,15 @@ describe("Nested Forms - Readonly/Disabled Propagation to Array of Forms", () =>
       formGroup({ name: "Bob" }),
     ];
 
-    // The new form should also be readonly
-    // Note: This tests whether the form properly tracks and applies readonly
-    // to dynamically added nested forms
     assert.equal(
       form.controls.forms.value.length,
       2,
       "Should have 2 forms after adding"
     );
 
-    // Check if newly added form respects readonly
-    // This depends on implementation - the form may need to re-propagate readonly
-    checkReadonly(
-      form.controls.forms.value[0],
-      true,
-      "First form after adding new"
-    );
+    // Both the existing and newly added forms should be readonly
+    checkReadonly(form.controls.forms.value[0], true, "Existing form after add");
+    checkReadonly(form.controls.forms.value[1], true, "Newly added form after add");
   });
 
   it("mixed readonly and disabled states", () => {
@@ -774,8 +767,8 @@ describe("Nested Forms - Readonly Edge Cases (Stress Tests)", () => {
     deepCheckReadonly(form, false);
   });
 
-  // proxy is a buggy scenario
-  it.fails("array index assignment should propagate readonly", () => {
+  // Now fixed: array index assignment propagates readonly to newly assigned forms
+  it("array index assignment should propagate readonly", () => {
     const form = formGroup<{
       forms: Form<{ name: string }>[];
     }>({
