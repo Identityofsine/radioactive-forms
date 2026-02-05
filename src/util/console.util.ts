@@ -1,4 +1,4 @@
-export {};
+export { };
 
 declare global {
   interface Console {
@@ -9,23 +9,25 @@ declare global {
   }
 }
 
-console.dLog = function (...data: Parameters<typeof console.log>): void {
-  if (import.meta.env.VITE_DEBUG_LOGS === "true") {
-    console.log(...data);
-  }
+const debugEnabled =
+  (typeof import.meta !== 'undefined' &&
+    (import.meta as any).env?.VITE_DEBUG_LOGS === 'true') ||
+  (typeof process !== 'undefined' &&
+    process.env?.DEBUG_LOGS === 'true');
+
+console.dLog = (...data) => {
+  if (debugEnabled) console.log(...data);
 };
-console.dInfo = function (...data: Parameters<typeof console.info>): void {
-  if (import.meta.env.VITE_DEBUG_LOGS === "true") {
-    console.info(...data);
-  }
+
+console.dInfo = (...data) => {
+  if (debugEnabled) console.info(...data);
 };
-console.dWarn = function (...data: Parameters<typeof console.warn>): void {
-  if (import.meta.env.VITE_DEBUG_LOGS === "true") {
-    console.warn(...data);
-  }
+
+console.dWarn = (...data) => {
+  if (debugEnabled) console.warn(...data);
 };
-console.dError = function (...data: Parameters<typeof console.error>): void {
-  if (import.meta.env.VITE_DEBUG_LOGS === "true") {
-    console.error(...data);
-  }
+
+console.dError = (...data) => {
+  if (debugEnabled) console.error(...data);
 };
+
