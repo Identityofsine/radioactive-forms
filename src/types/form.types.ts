@@ -9,9 +9,9 @@ export interface FormState<T> {
   readonly: boolean;
 }
 
-export interface TopLevelFormState<T> extends FormState<T> {}
+export interface TopLevelFormState<T> extends FormState<T> { }
 
-export interface ControlFormState<T> extends FormState<T> {}
+export interface ControlFormState<T> extends FormState<T> { }
 
 export interface Cloneable {
   clone(): this;
@@ -19,13 +19,13 @@ export interface Cloneable {
 
 type TupleControlForNonArray<T> = [T] extends [readonly any[]]
   ? // Allow tuple config for array values as well: [initialArray, validators?]
-    | [T | undefined | null]
-    | [T | undefined | null, ValidatorFn<any> | ValidatorFn<any>[]]
+  | [T | undefined | null]
+  | [T | undefined | null, ValidatorFn<any> | ValidatorFn<any>[]]
   :
-      // Allow [value] or [value, validators], where validators can target any
-      // supertype of T, so unions like string | number are accepted.
-      | [T | undefined | null]
-      | [T | undefined | null, ValidatorFn<any> | ValidatorFn<any>[]];
+  // Allow [value] or [value, validators], where validators can target any
+  // supertype of T, so unions like string | number are accepted.
+  | [T | undefined | null]
+  | [T | undefined | null, ValidatorFn<any> | ValidatorFn<any>[]];
 
 // Accept either the direct value or a tuple initializer for it. For unions like string | number,
 // both tuple branches should be accepted via distributive conditional on T.
@@ -50,19 +50,21 @@ export type FormControlPrimitiveMap<T> = {
 type ExtractControlValue<T> =
   // Tuple syntax: [value] | [value, validators]
   T extends readonly [infer V]
-    ? V
-    : T extends readonly [infer V, any]
-      ? V
-      // Nested Form stays as Form<...>
-      : T extends Form<infer U>
-        ? Form<U>
-        // Widen tuple-like arrays of Forms to Array<Form<...>>
-        : T extends ReadonlyArray<infer I>
-          ? I extends Form<any>
-            ? Array<I>
-            : T
-        : T;
+  ? V
+  : T extends readonly [infer V, any]
+  ? V
+  // Nested Form stays as Form<...>
+  : T extends Form<infer U>
+  ? Form<U>
+  // Widen tuple-like arrays of Forms to Array<Form<...>>
+  : T extends ReadonlyArray<infer I>
+  ? I extends Form<any>
+  ? Array<I>
+  : T
+  : T;
 
-export type FormControlMap<T> = {
+export type FormControlMap<T> = Readonly<{
   [K in keyof T]: FormControl<ExtractControlValue<T[K]>, T>;
-};
+}>;
+
+export type Writeable<T> = { -readonly [P in keyof T]: T[P] };

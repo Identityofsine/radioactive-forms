@@ -3,6 +3,7 @@ import {
   FormControlNonArrayPrimitive,
   FormControlNonArrayPrimitiveMap,
   FormControlPrimitiveMap,
+  Writeable,
 } from "../../types/form.types";
 import { ValidatorFn } from "../../types/validator.types";
 import { BaseForm } from "../base-form";
@@ -48,7 +49,7 @@ export function createFormControls<T>(
   if (typeof form !== "object" || form === null) {
     throw new Error("Form must be a non-null object");
   }
-  const controls = {} as FormControlMap<T>;
+  const controls = {} as Writeable<FormControlMap<T>>;
 
   for (const key in form) {
     const control = form[key];
@@ -152,7 +153,7 @@ export function createFormControls<T>(
       controls[key] = formControl(key, initialValue, [], setState);
     }
   }
-  return controls;
+  return controls as FormControlMap<T>;
 }
 
 // Re-export from functional for backwards compatibility
@@ -245,7 +246,7 @@ export function assignHooklessForm<T>(
   }
 
   rControl.patchValue(
-    hooklessFormLogic<T>(formInstance, controlFactory as RefOrFactory<FormControl<Form<T>[], any>>),
+    hooklessFormLogic<T>(formInstance, controlFactory as RefOrFactory<FormControl<Form<T>[], any>>) as Form<T> | Form<T>[],
     {
       stateless: true,
     }

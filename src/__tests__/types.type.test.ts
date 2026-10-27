@@ -13,7 +13,7 @@ describe("Types - compile-time assertions", () => {
       age: [30, [Validators.required]],
       flags: { active: true },
       flagsWithValidator: [{ active: true }, [Validators.required]],
-      flagsWithValidatorArray: [[{ active: true, inactive: false }, {active: false, inactive: true}], [Validators.required]],
+      flagsWithValidatorArray: [[{ active: true, inactive: false }, { active: false, inactive: true }], [Validators.required]],
       nickname: [
         "admini",
         [Validators.required]
@@ -60,5 +60,20 @@ describe("Types - compile-time assertions", () => {
 
     // Negative example (keep commented). Uncomment to ensure compile fails as expected.
     // expectTypeOf(form.controls.age.value).toEqualTypeOf<string>();
+  });
+  it("cannot assign controls directly by key", () => {
+    const form = formGroup({
+      name: "Admin",
+      age: 30,
+    });
+
+    form.controls.name.value = "New Name"; // This should be allowed
+    form.controls.age.value = 25; // This should be allowed
+
+    // @ts-expect-error: Direct assignment to controls should not be allowed
+    form.controls.name = undefined;
+
+    // @ts-expect-error: Direct assignment to controls should not be allowed
+    form.controls.age = undefined; // This should also not be allowed
   });
 });
