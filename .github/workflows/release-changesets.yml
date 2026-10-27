@@ -10,15 +10,13 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with: { fetch-depth: 0 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org
-          scope: '@identityofsine'
-          always-auth: true
-          cache: npm
+          package-manager-cache: false
       - run: npm ci
       - run: npm run test
       - name: Prepare publish script
@@ -30,8 +28,5 @@ jobs:
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Provide both variables; setup-node writes .npmrc expecting NODE_AUTH_TOKEN
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
 

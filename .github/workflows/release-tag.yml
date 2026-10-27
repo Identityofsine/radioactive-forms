@@ -9,14 +9,12 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org
-          always-auth: true
-          scope: '@identityofsine'
-          cache: npm
+          package-manager-cache: false
       - run: npm ci
       - run: npm run test
       - name: Prepare publish script
@@ -41,7 +39,5 @@ jobs:
       - name: Publish to npm (if needed)
         if: steps.check.outputs.skip_publish == 'false'
         run: node .github/scripts/publish-if-needed.mjs
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
 
